@@ -173,7 +173,7 @@ services:
       NEXT_PUBLIC_AUTH_PROVIDER: "local"
       # Client-side URL (from browser)
       NEXT_PUBLIC_BACKEND_URL: "http://localhost:8000"
-      # Server-side URL (SSR, internal Docker network)p
+      # Server-side URL (SSR, internal Docker network)
       BACKEND_URL: "http://api:8000"
 
       # Posthog
