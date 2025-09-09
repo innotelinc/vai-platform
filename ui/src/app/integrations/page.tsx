@@ -6,6 +6,8 @@ import logger from '@/lib/logger';
 
 import CreateIntegrationButton from "./CreateIntegrationButton";
 
+export const dynamic = 'force-dynamic';
+
 // Server component for integration list
 async function IntegrationList() {
     const authProvider = getServerAuthProvider();

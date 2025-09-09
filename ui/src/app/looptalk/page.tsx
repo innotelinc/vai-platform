@@ -6,6 +6,8 @@ import { getServerAuthProvider, isServerAuthenticated } from '@/lib/auth/server'
 
 import LoopTalkLayout from "./LoopTalkLayout";
 
+export const dynamic = 'force-dynamic';
+
 async function PageContent() {
     const authProvider = getServerAuthProvider();
     const isAuthenticated = await isServerAuthenticated();

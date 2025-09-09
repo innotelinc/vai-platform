@@ -169,6 +169,9 @@ services:
       # Server-side URL (SSR, internal Docker network)
       BACKEND_URL: "http://api:8000"
 
+      # Controls some feature flags like voicemail detection
+      NEXT_PUBLIC_DEPLOYMENT_MODE: "oss"
+
       # Posthog
       NEXT_PUBLIC_ENABLE_POSTHOG: "true"
       NEXT_PUBLIC_POSTHOG_KEY: "phc_st6dverimoydkpM5m0a9aeAr8znUYWznEaQa8v80E2D"

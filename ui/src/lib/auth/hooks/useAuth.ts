@@ -2,10 +2,24 @@
 
 import React from 'react';
 
+import logger from '@/lib/logger';
+
 import { useAuthContext } from '../providers/AuthProvider';
 
 export function useAuth() {
+  const renderCount = React.useRef(0);
+  renderCount.current++;
+
   const context = useAuthContext();
+
+  logger.debug('[useAuth] Hook called', {
+    renderCount: renderCount.current,
+    hasUser: !!context.user,
+    userId: context.user?.id,
+    isAuthenticated: context.isAuthenticated,
+    loading: context.loading,
+    provider: context.provider
+  });
 
   // Memoize functions that are recreated on every render
   const logout = React.useCallback(() => context.service.logout(), [context.service]);

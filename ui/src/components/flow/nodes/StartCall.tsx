@@ -170,6 +170,7 @@ const StartCallEditForm = ({
     delayedStartDuration,
     setDelayedStartDuration
 }: StartCallEditFormProps) => {
+    const isOSS = process.env.NEXT_PUBLIC_DEPLOYMENT_MODE === 'oss';
 
     return (
         <div className="grid gap-2">
@@ -240,19 +241,21 @@ const StartCallEditForm = ({
                     </Label>
                 </div>
             </div>
-            <div className="flex items-center space-x-2">
-                <Switch
-                    id="detect-voicemail"
-                    checked={detectVoicemail}
-                    onCheckedChange={setDetectVoicemail}
-                />
-                <Label htmlFor="detect-voicemail">
-                    Detect Voicemail
-                </Label>
-                <Label className="text-xs text-gray-500">
-                    Automatically detect and end call if voicemail is reached.
-                </Label>
-            </div>
+            {!isOSS && (
+                <div className="flex items-center space-x-2">
+                    <Switch
+                        id="detect-voicemail"
+                        checked={detectVoicemail}
+                        onCheckedChange={setDetectVoicemail}
+                    />
+                    <Label htmlFor="detect-voicemail">
+                        Detect Voicemail
+                    </Label>
+                    <Label className="text-xs text-gray-500">
+                        Automatically detect and end call if voicemail is reached.
+                    </Label>
+                </div>
+            )}
             <div className="flex flex-col space-y-2">
                 <div className="flex items-center space-x-2">
                     <Switch

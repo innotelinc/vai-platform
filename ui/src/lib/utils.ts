@@ -27,27 +27,43 @@ export function debounce<T extends (...args: unknown[]) => unknown>(func: T, wai
 }
 
 export async function getRedirectUrl(token: string, permissions: { id: string }[] = []) {
+  console.log('[getRedirectUrl] Called with:', {
+    hasToken: !!token,
+    tokenLength: token?.length,
+    permissionsCount: permissions.length,
+    permissions: permissions.map(p => p.id)
+  });
   try {
+    console.log('[getRedirectUrl] Calling getAuthUserApiV1UserAuthUserGet...');
     const authUser = await getAuthUserApiV1UserAuthUserGet({
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
+    console.log('[getRedirectUrl] Auth user response:', {
+      hasData: !!authUser.data,
+      isSuperuser: authUser.data?.is_superuser,
+      userId: authUser.data?.id
+    });
     if (authUser.data?.is_superuser) {
+      console.log('[getRedirectUrl] User is superuser, redirecting to /superadmin');
       return "/superadmin";
     }
 
     const hasAdminPermission = permissions.some(p => p.id === 'admin');
+    console.log('[getRedirectUrl] Admin permission check:', { hasAdminPermission });
 
   // If the user doesn't have admin permissions, redirect them to
   // usage page
   if (!hasAdminPermission) {
+    console.log('[getRedirectUrl] No admin permission, redirecting to /usage');
     return "/usage";
   }
 
+  console.log('[getRedirectUrl] Has admin permission, redirecting to /create-workflow');
   return "/create-workflow";
   } catch (error) {
-    console.error("Failed to fetch auth user:", error);
+    console.error("[getRedirectUrl] Failed to fetch auth user:", error);
     // Re-throw the error so the caller can handle it
     throw error;
   }
