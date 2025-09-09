@@ -1,0 +1,47 @@
+import os
+from pathlib import Path
+
+# Absolute path to the project root directory (i.e. the directory containing
+# the top-level api/ package). Having a single canonical location helps
+# when constructing file-system paths elsewhere in the codebase.
+APP_ROOT_DIR: Path = Path(__file__).resolve().parent
+
+FILLER_SOUND_PROBABILITY = 0.0
+
+VOICEMAIL_RECORDING_DURATION = 5.0
+
+# Configuration constants
+ENABLE_SMART_TURN = os.getenv("ENABLE_SMART_TURN", "false").lower() == "true"
+ENABLE_TRACING = os.getenv("ENABLE_TRACING", "false").lower() == "true"
+ENABLE_RNNOISE = os.getenv("ENABLE_RNNOISE", "false").lower() == "true"
+
+BACKEND_API_ENDPOINT = os.getenv("BACKEND_API_ENDPOINT", None)
+TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", None)
+TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", None)
+TWILIO_DEFAULT_FROM_NUMBER = os.getenv("TWILIO_FROM_NUMBER", None)
+
+DATABASE_URL = os.environ["DATABASE_URL"]
+REDIS_URL = os.environ["REDIS_URL"]
+
+DEPLOYMENT_MODE = os.getenv("DEPLOYMENT_MODE", "oss")
+DOGRAH_MPS_SECRET_KEY = os.getenv("DOGRAH_MPS_SECRET_KEY", None)
+MPS_API_URL = os.getenv("MPS_API_URL", "https://services.dograh.com")
+
+# Storage Configuration
+ENABLE_AWS_S3 = os.getenv("ENABLE_AWS_S3", "false").lower() == "true"
+
+# MinIO Configuration
+MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "localhost:9000")
+MINIO_PUBLIC_ENDPOINT = os.getenv("MINIO_PUBLIC_ENDPOINT")
+MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
+MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minioadmin")
+MINIO_BUCKET = os.getenv("MINIO_BUCKET", "voice-audio")
+MINIO_SECURE = os.getenv("MINIO_SECURE", "false").lower() == "true"
+
+# AWS S3 Configuration
+S3_BUCKET = os.environ.get("S3_BUCKET")
+S3_REGION = os.environ.get("S3_REGION", "us-east-1")
+
+# Sentry configuration
+ENABLE_SENTRY = os.getenv("ENABLE_SENTRY", "false").lower() == "true"
+SENTRY_DSN = os.getenv("SENTRY_DSN")

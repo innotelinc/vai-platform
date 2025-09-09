@@ -1,0 +1,11 @@
+__pycache__
+.DS_Store
+.env
+
+# logs and run directory on production
+/logs/
+/run/
+docs/
+infrastructure/
+nginx/
+scripts/
