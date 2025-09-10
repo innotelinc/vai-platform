@@ -1,9 +1,11 @@
 import asyncio
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, BinaryIO, Dict, Optional
 
+from loguru import logger
 from minio import Minio
 from minio.error import S3Error
+import json
 
 from .base import BaseFileSystem
 
@@ -42,12 +44,29 @@ class MinioFileSystem(BaseFileSystem):
             endpoint, access_key=access_key, secret_key=secret_key, secure=secure
         )
 
-        # Ensure bucket exists (using internal client)
+        # Ensure bucket exists and configure anonymous access (using internal client)
         try:
             if not self.client.bucket_exists(self.bucket_name):
                 self.client.make_bucket(self.bucket_name)
+            
+            # Set anonymous download policy for local development
+            # This allows unsigned URLs to work
+            policy = {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Principal": {"AWS": "*"},
+                        "Action": ["s3:GetObject"],
+                        "Resource": [f"arn:aws:s3:::{self.bucket_name}/*"]
+                    }
+                ]
+            }
+            
+            self.client.set_bucket_policy(self.bucket_name, json.dumps(policy))
         except Exception as e:
             # Bucket might already exist or we might be in a restricted environment
+            logger.debug(f"Bucket setup note: {e}")
             pass
 
     async def acreate_file(self, file_path: str, content: BinaryIO) -> bool:
@@ -82,39 +101,14 @@ class MinioFileSystem(BaseFileSystem):
         self, file_path: str, expiration: int = 3600, force_inline: bool = False
     ) -> Optional[str]:
         try:
-
-            def _presign():
-                response_headers = None
-                if force_inline and file_path.endswith(".txt"):
-                    response_headers = {
-                        "response-content-type": "text/plain",
-                        "response-content-disposition": "inline",
-                    }
-
-                # Generate URL with the main client
-                url = self.client.presigned_get_object(
-                    self.bucket_name,
-                    file_path,
-                    expires=timedelta(seconds=expiration),
-                    response_headers=response_headers,
-                )
-
-                # If we have different public endpoint, replace it in the URL
-                if self.endpoint != self.public_endpoint:
-                    # Simple string replacement since presigned URLs are just strings
-                    # Replace the endpoint in the URL
-                    url = url.replace(
-                        f"://{self.endpoint}/", f"://{self.public_endpoint}/"
-                    )
-                    url = url.replace(
-                        f"Host={self.endpoint}", f"Host={self.public_endpoint}"
-                    )
-
-                return url
-
-            url = await asyncio.to_thread(_presign)
+            # For MinIO in local development, return unsigned URLs
+            # This avoids signature mismatch issues when endpoint differs
+            # MinIO must be configured to allow anonymous read access
+            protocol = "https" if self.secure else "http"
+            url = f"{protocol}://{self.public_endpoint}/{self.bucket_name}/{file_path}"
             return url
-        except S3Error:
+        except Exception as e:
+            logger.error(f"Error generating MinIO URL: {e}")
             return None
 
     async def aget_file_metadata(self, file_path: str) -> Optional[Dict[str, Any]]:
