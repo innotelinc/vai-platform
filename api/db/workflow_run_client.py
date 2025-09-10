@@ -14,6 +14,7 @@ from api.db.models import (
     WorkflowModel,
     WorkflowRunModel,
 )
+from api.enums import StorageBackend
 from api.schemas.workflow import WorkflowRunResponseSchema
 
 
@@ -67,6 +68,9 @@ class WorkflowRunClient(BaseDBClient):
             )
             current_def = current_def_result.scalars().first()
 
+            # Get the current storage backend based on ENABLE_AWS_S3 flag
+            current_backend = StorageBackend.get_current_backend()
+            
             new_run = WorkflowRunModel(
                 name=name,
                 workflow=workflow,
@@ -75,6 +79,7 @@ class WorkflowRunClient(BaseDBClient):
                 initial_context=initial_context or workflow.template_context_variables,
                 campaign_id=campaign_id,
                 queued_run_id=queued_run_id,
+                storage_backend=current_backend.value,
             )
             session.add(new_run)
             try:

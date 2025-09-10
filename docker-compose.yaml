@@ -59,7 +59,7 @@ services:
       - app-network
 
   api:
-    image: chewieee/dograh-api:v7
+    image: dograhai/dograh-api:v1
     volumes:
       - shared-tmp:/tmp
     environment:
@@ -122,7 +122,7 @@ services:
       - app-network
 
   arq-worker:
-    image: chewieee/dograh-api:v7
+    image: dograhai/dograh-api:v1
     volumes:
       - shared-tmp:/tmp
     environment:
@@ -149,16 +149,23 @@ services:
       # Sentry
       ENABLE_SETRY: "false"
       SENTRY_DSN: ""
+    command: >
+      bash -c "
+        cd /app/api &&
+        python -m arq api.tasks.arq.WorkerSettings
+      "
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      minio:
+        condition: service_healthy
     networks:
       - app-network
 
   ui:
-    image: chewieee/dograh-ui:v10
+    image: dograhai/dograh-ui:v1
     environment:
       NEXT_PUBLIC_NODE_ENV: "local"
       NEXT_PUBLIC_AUTH_PROVIDER: "local"
