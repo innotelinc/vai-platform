@@ -31,25 +31,46 @@ Maintained by YC alumni and exit founders, we're making sure the future of voice
 
 To run Dograh AI locally, make sure you have the following installed:
 
-- [Docker](https://docs.docker.com/get-docker/)  
-- [Docker Compose](https://docs.docker.com/compose/install/)  
+- [Docker](https://docs.docker.com/get-docker/) (version 20.10 or later)
 - [curl](https://curl.se/download.html) – usually preinstalled on macOS/Linux
 
-
 > **Note**  
-> Make sure Docker Desktop (or your system’s Docker service) is running before you begin.
+> Docker Compose is included with Docker Desktop. Make sure Docker is running before you begin.
+
+### Required Ports
+
+Ensure these ports are available:
+- `3000` - Web UI
+- `8000` - API Server
+- `5432` - PostgreSQL
+- `6379` - Redis
+- `9000` - MinIO (S3-compatible storage)
+- `9001` - MinIO Console
 
 ## 🚀 Get Started
 
 The only commands you need to run:
 
 ```bash
-curl -o docker-compose.yml https://raw.githubusercontent.com/Flagsmith/flagsmith/main/docker-compose.yml
-docker-compose -f docker-compose.yml up
-````
+# Download the docker-compose file
+curl -o docker-compose.yml https://raw.githubusercontent.com/dograh-hq/dograh/main/docker-compose.yaml
+
+# Start all services (add -d to run in background)
+docker compose up -d
+```
 
 > **Note**  
-> Open your browser at http://localhost:3000 and create your first AI voice assistant for the usecase you want!
+> First startup may take 2-3 minutes to download all images. Once running, open http://localhost:3000 to create your first AI voice assistant!
+
+### Stopping Services
+
+```bash
+# Stop services
+docker compose down
+
+# Stop and remove all data (full cleanup)
+docker compose down -v
+```
  
 ### 🎙️ Your First Voice Bot
 
