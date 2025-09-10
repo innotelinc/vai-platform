@@ -49,14 +49,11 @@ Ensure these ports are available:
 
 ## 🚀 Get Started
 
-The only commands you need to run:
+The only command you need to run:
 
 ```bash
-# Download the docker-compose file
-curl -o docker-compose.yml https://raw.githubusercontent.com/dograh-hq/dograh/main/docker-compose.yaml
-
-# Start all services (add -d to run in background)
-docker compose up -d
+# Download and start Dograh
+curl -o docker-compose.yaml https://raw.githubusercontent.com/dograh-hq/dograh/main/docker-compose.yaml && docker compose up -d
 ```
 
 > **Note**  
