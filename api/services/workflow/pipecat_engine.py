@@ -15,7 +15,7 @@ from pipecat.services.openai.llm import OpenAILLMContext
 from pipecat.transports.base_transport import BaseTransport
 from pipecat.utils.enums import EndTaskReason
 
-from api.constants import VOICEMAIL_RECORDING_DURATION
+from api.constants import DEPLOYMENT_MODE, ENABLE_TRACING, VOICEMAIL_RECORDING_DURATION
 from api.services.gender.gender_service import GenderService
 from api.services.workflow.disposition_mapper import (
     apply_disposition_mapping,
@@ -480,7 +480,9 @@ class PipecatEngine:
     async def _handle_start_node(self, node: Node) -> None:
         """Handle start node execution."""
         # Handle voicemail detection setup (before any returns)
-        if node.detect_voicemail:
+        # Lets check ENABLE_TRACING to make sure we have prompt access from 
+        # langfuse
+        if node.detect_voicemail and DEPLOYMENT_MODE == 'saas' and ENABLE_TRACING:
             if not self._audio_buffer:
                 logger.warning(
                     "Voicemail detection enabled but no audio buffer available - skipping detection"

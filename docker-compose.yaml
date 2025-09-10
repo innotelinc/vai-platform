@@ -83,8 +83,6 @@ services:
       MINIO_BUCKET: "voice-audio"
       MINIO_SECURE: "false"
 
-      MPS_API_URL: "https://dograh.a.pinggy.link"
-
       # Langfuse
       ENABLE_TRACING: "false"
       # LANGFUSE_SECRET_KEY: ""
@@ -168,6 +166,9 @@ services:
       NEXT_PUBLIC_BACKEND_URL: "http://localhost:8000"
       # Server-side URL (SSR, internal Docker network)
       BACKEND_URL: "http://api:8000"
+
+      # Controls some feature flags like voicemail detection
+      NEXT_PUBLIC_DEPLOYMENT_MODE: "oss"
 
       # Posthog
       NEXT_PUBLIC_ENABLE_POSTHOG: "true"

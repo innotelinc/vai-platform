@@ -21,9 +21,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/lib/auth';
+import logger from '@/lib/logger';
 
 export default function APIKeysPage() {
     const { user, getAccessToken, redirectToLogin, loading } = useAuth();
+
+    logger.debug('[APIKeysPage] Component render', {
+        loading,
+        hasUser: !!user,
+        userId: user?.id,
+        timestamp: new Date().toISOString()
+    });
 
     const [apiKeys, setApiKeys] = useState<ApiKeyResponse[]>([]);
     const [serviceKeys, setServiceKeys] = useState<ServiceKeyResponse[]>([]);
@@ -49,12 +57,24 @@ export default function APIKeysPage() {
     }, [loading, user, redirectToLogin]);
 
     const fetchApiKeys = useCallback(async () => {
-        if (!user) return;
+        logger.debug('[APIKeysPage] fetchApiKeys called', {
+            loading,
+            hasUser: !!user,
+            userId: user?.id
+        });
+
+        // Follow the pattern from UserConfigContext - check both loading and user
+        if (loading || !user) {
+            logger.debug('[APIKeysPage] fetchApiKeys - skipping due to loading or no user');
+            return;
+        }
 
         try {
             setIsLoading(true);
             setError(null);
+            logger.debug('[APIKeysPage] fetchApiKeys - calling getAccessToken...');
             const accessToken = await getAccessToken();
+            logger.debug('[APIKeysPage] fetchApiKeys - got access token');
 
             const response = await getApiKeysApiV1UserApiKeysGet({
                 query: {
@@ -76,15 +96,27 @@ export default function APIKeysPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [user, getAccessToken, showArchived]);
+    }, [loading, user, getAccessToken, showArchived]);
 
     const fetchServiceKeys = useCallback(async () => {
-        if (!user) return;
+        logger.debug('[APIKeysPage] fetchServiceKeys called', {
+            loading,
+            hasUser: !!user,
+            userId: user?.id
+        });
+
+        // Follow the pattern from UserConfigContext - check both loading and user
+        if (loading || !user) {
+            logger.debug('[APIKeysPage] fetchServiceKeys - skipping due to loading or no user');
+            return;
+        }
 
         try {
             setIsServiceKeysLoading(true);
             setError(null);
+            logger.debug('[APIKeysPage] fetchServiceKeys - calling getAccessToken...');
             const accessToken = await getAccessToken();
+            logger.debug('[APIKeysPage] fetchServiceKeys - got access token');
 
             const response = await getServiceKeysApiV1UserServiceKeysGet({
                 query: {
@@ -104,13 +136,15 @@ export default function APIKeysPage() {
         } finally {
             setIsServiceKeysLoading(false);
         }
-    }, [user, getAccessToken, showServiceArchived]);
+    }, [loading, user, getAccessToken, showServiceArchived]);
 
     useEffect(() => {
+        logger.debug('[APIKeysPage] useEffect for fetchApiKeys triggered');
         fetchApiKeys();
     }, [fetchApiKeys]);
 
     useEffect(() => {
+        logger.debug('[APIKeysPage] useEffect for fetchServiceKeys triggered');
         fetchServiceKeys();
     }, [fetchServiceKeys]);
 

@@ -13,6 +13,8 @@ import logger from '@/lib/logger';
 
 import WorkflowLayout from "./WorkflowLayout";
 
+export const dynamic = 'force-dynamic';
+
 // Server component for workflow templates
 async function WorkflowTemplatesList() {
     try {
