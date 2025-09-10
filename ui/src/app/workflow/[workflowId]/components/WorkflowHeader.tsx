@@ -67,6 +67,7 @@ const WorkflowHeader = ({ isDirty, workflowName, rfInstance, onRun, workflowId, 
     const { user, getAccessToken } = useAuth();
 
     const hasValidationErrors = workflowValidationErrors.length > 0;
+    const isOSSDeployment = process.env.NEXT_PUBLIC_DEPLOYMENT_MODE === 'oss';
 
     // Reset call-related state whenever the dialog is closed so that a new call can be placed
     useEffect(() => {
@@ -195,15 +196,17 @@ const WorkflowHeader = ({ isDirty, workflowName, rfInstance, onRun, workflowId, 
                 <Phone className="mr-2 h-4 w-4" />
                 Web Call
             </Button>
-            <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setDialogOpen(true)}
-                disabled={hasValidationErrors}
-            >
-                <Phone className="mr-2 h-4 w-4" />
-                Phone Call
-            </Button>
+            {!isOSSDeployment && (
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDialogOpen(true)}
+                    disabled={hasValidationErrors}
+                >
+                    <Phone className="mr-2 h-4 w-4" />
+                    Phone Call
+                </Button>
+            )}
 
             {isDirty ? (
                 <Button

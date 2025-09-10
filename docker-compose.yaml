@@ -83,8 +83,6 @@ services:
       MINIO_BUCKET: "voice-audio"
       MINIO_SECURE: "false"
 
-      MPS_API_URL: "https://dograh.a.pinggy.link"
-
       # Langfuse
       ENABLE_TRACING: "false"
       # LANGFUSE_SECRET_KEY: ""
