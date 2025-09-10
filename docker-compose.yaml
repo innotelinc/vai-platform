@@ -59,7 +59,7 @@ services:
       - app-network
 
   api:
-    image: dograhai/dograh-api:v1
+    image: dograhai/dograh-api:b0d95108
     volumes:
       - shared-tmp:/tmp
     environment:
@@ -122,7 +122,7 @@ services:
       - app-network
 
   arq-worker:
-    image: dograhai/dograh-api:v1
+    image: dograhai/dograh-api:b0d95108
     volumes:
       - shared-tmp:/tmp
     environment:
@@ -165,7 +165,7 @@ services:
       - app-network
 
   ui:
-    image: dograhai/dograh-ui:v1
+    image: dograhai/dograh-ui:b0d95108
     environment:
       NEXT_PUBLIC_NODE_ENV: "local"
       NEXT_PUBLIC_AUTH_PROVIDER: "local"
