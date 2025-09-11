@@ -25,49 +25,18 @@ Maintained by YC alumni and exit founders, we're making sure the future of voice
 ## 🎥 Demo Video
 📺 [Watch 1-min demo video](#) *(coming soon)*
 
-## 🚀 Quickstart
-
-### Prerequisites
-
-To run Dograh AI locally, make sure you have the following installed:
-
-- [Docker](https://docs.docker.com/get-docker/) (version 20.10 or later)
-- [curl](https://curl.se/download.html) – usually preinstalled on macOS/Linux
-
-> **Note**  
-> Docker Compose is included with Docker Desktop. Make sure Docker is running before you begin.
-
-### Required Ports
-
-Ensure these ports are available:
-- `3000` - Web UI
-- `8000` - API Server
-- `5432` - PostgreSQL
-- `6379` - Redis
-- `9000` - MinIO (S3-compatible storage)
-- `9001` - MinIO Console
-
 ## 🚀 Get Started
 
 The only command you need to run:
 
 ```bash
 # Download and start Dograh
-curl -o docker-compose.yaml https://raw.githubusercontent.com/dograh-hq/dograh/main/docker-compose.yaml && docker compose up -d
+curl -o docker-compose.yaml https://raw.githubusercontent.com/dograh-hq/dograh/main/docker-compose.yaml && docker compose up
 ```
 
 > **Note**  
-> First startup may take 2-3 minutes to download all images. Once running, open http://localhost:3000 to create your first AI voice assistant!
-
-### Stopping Services
-
-```bash
-# Stop services
-docker compose down
-
-# Stop and remove all data (full cleanup)
-docker compose down -v
-```
+> First startup may take 2-3 minutes to download all images. Once running, open http://localhost:3000 to create your first AI voice assistant!  
+> For prerequisites, port issues, or troubleshooting, see the [Prerequisites and Troubleshooting](#-prerequisites-and-troubleshooting) section below.
  
 ### 🎙️ Your First Voice Bot
 
@@ -107,6 +76,81 @@ docker compose down -v
 - Workflow Testing: Test specific workflow IDs with automated calls
 - Real-world Simulation: AI personas that mimic actual customer behavior
 
+## 🔧 Prerequisites and Troubleshooting
+
+### Prerequisites
+
+To run Dograh AI locally, make sure you have the following installed:
+
+- [Docker](https://docs.docker.com/get-docker/) (version 20.10 or later)
+- [curl](https://curl.se/download.html) – usually preinstalled on macOS/Linux
+
+> **Note**  
+> Docker Compose is included with Docker Desktop. Make sure Docker is running before you begin.
+
+### Required Ports
+
+Ensure these ports are available:
+- `3000` - Web UI
+- `8000` - API Server
+- `5432` - PostgreSQL
+- `6379` - Redis
+- `9000` - MinIO (S3-compatible storage)
+- `9001` - MinIO Console
+
+### Checking Port Availability
+
+```bash
+# Check if a port is in use (replace 3000 with the port number)
+lsof -i :3000
+```
+
+### Freeing Up Ports
+
+#### When a port is already in use:
+```bash
+# Check what's using the port first
+lsof -i :3000
+
+# Then kill the process (may require sudo on Linux)
+kill -9 $(lsof -t -i :3000)
+```
+
+#### When Docker containers are using the ports (with auto-restart enabled):
+
+**Step 1:** Stop all running containers
+```bash
+docker stop $(docker ps -q)
+```
+
+**Step 2:** Disable restart policy for all containers
+This prevents containers from automatically restarting:
+```bash
+docker update --restart=no $(docker ps -a -q)
+```
+
+**Step 3:** Verify
+
+Check that no containers are running:
+```bash
+docker ps
+```
+
+Check restart policies (should show 'no' for each container):
+```bash
+docker inspect -f '{{.Name}} - {{.HostConfig.RestartPolicy.Name}}' $(docker ps -a -q)
+```
+
+### Stopping Dograh Services
+
+```bash
+# Stop services
+docker compose down
+
+# Stop and remove all data (full cleanup)
+docker compose down -v
+```
+
 ## Configuration
 Dograh automatically generates API keys on first run, but you can use your own keys. 
   - OPENAI_API_KEY=your_key_here
@@ -118,7 +162,7 @@ Architecture diagram  *(coming soon)*
 
 ## Deployment Options
 ### Local Development
-Refer [prerequisites](#Prerequisites) and [first steps](#get-started)
+Refer [prerequisites](#prerequisites) and [first steps](#-get-started)
 
 ### Production (Self-Hosted)
 Production guide coming soon. [Drop in a message](https://join.slack.com/t/dograh-community/shared_invite/zt-3czr47sw5-MSg1J0kJ7IMPOCHF~03auQ) for assistance.
