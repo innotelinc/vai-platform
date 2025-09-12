@@ -23,7 +23,7 @@ Build voice agents in just one line or drag-and-drop, then test them using AI pe
 Maintained by YC alumni and exit founders, we're making sure the future of voice AI stays open, not monopolized.
 
 ## 🎥 Demo Video
-📺 [Watch 1-min demo video](#) *(coming soon)*
+📺 [Watch a quick demo video](https://www.youtube.com/watch?v=LK8mvK5TH2Q)
 
 ## 🚀 Get Started
 
