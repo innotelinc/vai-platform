@@ -15,8 +15,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/lib/auth';
 import { downloadFile } from '@/lib/files';
 
-import { ContextDisplay } from './components';
-
 interface WorkflowRunResponse {
     is_completed: boolean;
     transcript_url: string | null;
