@@ -7,6 +7,7 @@ import { Suspense } from "react";
 import PostHogIdentify from "@/components/PostHogIdentify";
 import SpinLoader from "@/components/SpinLoader";
 import { Toaster } from "@/components/ui/sonner";
+import { OnboardingProvider } from "@/context/OnboardingContext";
 import { UserConfigProvider } from "@/context/UserConfigContext";
 import { AuthProvider } from "@/lib/auth";
 
@@ -39,9 +40,11 @@ export default function RootLayout({
         <AuthProvider>
           <Suspense fallback={<SpinLoader />}>
             <UserConfigProvider>
-              <PostHogIdentify />
-              {children}
-              <Toaster />
+              <OnboardingProvider>
+                <PostHogIdentify />
+                {children}
+                <Toaster />
+              </OnboardingProvider>
             </UserConfigProvider>
           </Suspense>
         </AuthProvider>

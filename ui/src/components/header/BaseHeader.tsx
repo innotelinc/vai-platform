@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleDollarSign, Loader2 } from 'lucide-react';
+import { CircleDollarSign, Loader2, Star } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import React from 'react';
@@ -126,9 +126,15 @@ export default function BaseHeader({ headerActions, backButton, showFeaturesNav 
                                 />
                             </React.Suspense>
                         ) : (
-                            <div className="text-sm text-gray-600">
-                                Github Star Link
-                            </div>
+                            <a
+                                href="https://github.com/dograh-hq/dograh"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                            >
+                                <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                                Star us on GitHub
+                            </a>
                         )}
                     </div>
                 </nav>

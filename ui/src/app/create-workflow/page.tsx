@@ -79,7 +79,7 @@ export default function CreateWorkflowPage() {
     };
 
     return (
-        <div className="min-h-[calc(100vh-64px)] flex items-center justify-center p-4 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="min-h-[100vh] flex items-center justify-center p-4 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
             <Card className="w-full max-w-4xl shadow-xl border-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur">
                 <CardHeader className="text-center pb-4 pt-6">
                     <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
@@ -115,11 +115,8 @@ export default function CreateWorkflowPage() {
                             </div>
 
                             <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-                                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2">
-                                    Use Case
-                                </label>
                                 <div className="flex items-start flex-col gap-2">
-                                    <span className="text-base font-medium text-gray-700 dark:text-gray-300">Which serves the use case:</span>
+                                    <span className="text-base font-medium text-gray-700 dark:text-gray-300">For the use case of</span>
                                     <Input
                                         className="w-full h-10 text-sm px-3 border-2 focus:ring-2 focus:ring-blue-500 transition-all"
                                         placeholder="e.g., Lead Qualification, HR Screening, Customer Support"
@@ -130,14 +127,11 @@ export default function CreateWorkflowPage() {
                             </div>
 
                             <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-                                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2">
-                                    Activity Description
-                                </label>
                                 <div className="flex items-start flex-col gap-2">
-                                    <span className="text-base font-medium text-gray-700 dark:text-gray-300">Which can:</span>
+                                    <span className="text-base font-medium text-gray-700 dark:text-gray-300">Which can</span>
                                     <textarea
                                         className="w-full min-h-[80px] text-sm px-3 py-2 border-2 rounded-md focus:ring-2 focus:ring-blue-500 transition-all resize-none"
-                                        placeholder="Describe what your voice agent will do (e.g., Qualify leads for real estate, Screen candidates for roles, Handle customer support)"
+                                        placeholder="Describe briefly what your voice agent will do (e.g., Qualify leads for real estate, Screen candidates for roles, Handle customer support). This will be a prompt to an LLM."
                                         value={activityDescription}
                                         onChange={(e) => setActivityDescription(e.target.value)}
                                     />

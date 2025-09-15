@@ -16,8 +16,7 @@ interface UseWebRTCProps {
 }
 
 export const useWebRTC = ({ workflowId, workflowRunId, accessToken, initialContextVariables }: UseWebRTCProps) => {
-    const [iceGatheringState, setIceGatheringState] = useState('');
-    const [iceConnectionState, setIceConnectionState] = useState('');
+    const [connectionStatus, setConnectionStatus] = useState<'idle' | 'connecting' | 'connected' | 'failed'>('idle');
     const [connectionActive, setConnectionActive] = useState(false);
     const [isCompleted, setIsCompleted] = useState(false);
     const [apiKeyModalOpen, setApiKeyModalOpen] = useState(false);
@@ -25,9 +24,8 @@ export const useWebRTC = ({ workflowId, workflowRunId, accessToken, initialConte
     const [workflowConfigModalOpen, setWorkflowConfigModalOpen] = useState(false);
     const [workflowConfigError, setWorkflowConfigError] = useState<string | null>(null);
     const [isStarting, setIsStarting] = useState(false);
-    const [initialContext, setInitialContext] = useState<Record<string, string>>(
-        initialContextVariables || {}
-    );
+    // Use initial context variables directly, no UI for editing
+    const initialContext = initialContextVariables || {};
 
     const {
         audioInputs,
@@ -55,14 +53,16 @@ export const useWebRTC = ({ workflowId, workflowRunId, accessToken, initialConte
 
         pc.addEventListener('icegatheringstatechange', () => {
             logger.info(`ICE gathering state changed in createPeerConnection, ${pc.iceGatheringState}`);
-            setIceGatheringState(prevState => prevState + ' -> ' + pc.iceGatheringState);
         });
-        setIceGatheringState(pc.iceGatheringState);
 
         pc.addEventListener('iceconnectionstatechange', () => {
-            setIceConnectionState(prevState => prevState + ' -> ' + pc.iceConnectionState);
+            logger.info(`ICE connection state changed: ${pc.iceConnectionState}`);
+            if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+                setConnectionStatus('connected');
+            } else if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
+                setConnectionStatus('failed');
+            }
         });
-        setIceConnectionState(pc.iceConnectionState);
 
         pc.addEventListener('track', (evt) => {
             if (evt.track.kind === 'audio' && audioRef.current) {
@@ -142,6 +142,7 @@ export const useWebRTC = ({ workflowId, workflowRunId, accessToken, initialConte
     const start = async () => {
         if (isStarting || !accessToken) return;
         setIsStarting(true);
+        setConnectionStatus('connecting');
         try {
             const response = await validateUserConfigurationsApiV1UserConfigurationsUserValidateGet({
                 headers: {
@@ -212,6 +213,7 @@ export const useWebRTC = ({ workflowId, workflowRunId, accessToken, initialConte
                 } catch (err) {
                     logger.error(`Could not acquire media: ${err}`);
                     setPermissionError('Could not acquire media');
+                    setConnectionStatus('failed');
                 }
             } else {
                 await negotiate();
@@ -224,6 +226,7 @@ export const useWebRTC = ({ workflowId, workflowRunId, accessToken, initialConte
     const stop = () => {
         setConnectionActive(false);
         setIsCompleted(true);
+        setConnectionStatus('idle');
 
         const pc = pcRef.current;
         if (!pc) return;
@@ -264,12 +267,10 @@ export const useWebRTC = ({ workflowId, workflowRunId, accessToken, initialConte
         workflowConfigError,
         workflowConfigModalOpen,
         setWorkflowConfigModalOpen,
-        iceGatheringState,
-        iceConnectionState,
+        connectionStatus,
         start,
         stop,
         isStarting,
-        initialContext,
-        setInitialContext
+        initialContext
     };
 };

@@ -1,22 +1,38 @@
+import { Loader2 } from 'lucide-react';
+
 interface ConnectionStatusProps {
-    iceGatheringState: string;
-    iceConnectionState: string;
+    connectionStatus: 'idle' | 'connecting' | 'connected' | 'failed';
 }
 
-export const ConnectionStatus = ({
-    iceGatheringState,
-    iceConnectionState
-}: ConnectionStatusProps) => {
-    return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-                <h3 className="text-sm font-medium">ICE gathering state</h3>
-                <p className="text-sm text-muted-foreground">{iceGatheringState}</p>
+export const ConnectionStatus = ({ connectionStatus }: ConnectionStatusProps) => {
+    if (connectionStatus === 'idle') return null;
+
+    if (connectionStatus === 'connecting') {
+        return (
+            <div className="flex items-center justify-center space-x-2 text-blue-600">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span className="text-sm font-medium">Establishing Connection...</span>
             </div>
-            <div className="space-y-2">
-                <h3 className="text-sm font-medium">ICE connection state</h3>
-                <p className="text-sm text-muted-foreground">{iceConnectionState}</p>
+        );
+    }
+
+    if (connectionStatus === 'connected') {
+        return (
+            <div className="flex items-center justify-center space-x-2 text-green-600">
+                <div className="h-2 w-2 bg-green-600 rounded-full animate-pulse" />
+                <span className="text-sm font-medium">Connected</span>
             </div>
-        </div>
-    );
+        );
+    }
+
+    if (connectionStatus === 'failed') {
+        return (
+            <div className="flex items-center justify-center space-x-2 text-red-600">
+                <div className="h-2 w-2 bg-red-600 rounded-full" />
+                <span className="text-sm font-medium">Connection Failed</span>
+            </div>
+        );
+    }
+
+    return null;
 };

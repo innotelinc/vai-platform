@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-import Pipecat from '@/app/workflow/[workflowId]/run/[runId]/Pipecat';
+import BrowserCall from '@/app/workflow/[workflowId]/run/[runId]/BrowserCall';
 import WorkflowLayout from '@/app/workflow/WorkflowLayout';
 import { getWorkflowRunApiV1WorkflowWorkflowIdRunsRunIdGet } from '@/client/sdk.gen';
 import { MediaPreviewButtons, MediaPreviewDialog } from '@/components/MediaPreviewDialog';
@@ -14,8 +14,6 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/lib/auth';
 import { downloadFile } from '@/lib/files';
-
-import { ContextDisplay } from './components';
 
 interface WorkflowRunResponse {
     is_completed: boolean;
@@ -125,7 +123,7 @@ export default function WorkflowRunPage() {
                 <div className="w-full max-w-4xl space-y-6">
                     <Card className="border-gray-100">
                         <CardHeader className="flex flex-row items-center justify-between">
-                            <CardTitle className="text-2xl">Workflow Run Completed</CardTitle>
+                            <CardTitle className="text-2xl">Agent Run Completed</CardTitle>
                             <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
                                 <svg className="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
@@ -133,7 +131,7 @@ export default function WorkflowRunPage() {
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-gray-600 mb-8">Your workflow run has been completed successfully. You can preview or download the transcript and recording.</p>
+                            <p className="text-gray-600 mb-8">Your voice agent run has been completed successfully. You can preview or download the transcript and recording.</p>
 
                             <div className="flex flex-wrap gap-4">
                                 <div className="flex items-center gap-2">
@@ -171,7 +169,7 @@ export default function WorkflowRunPage() {
                         </CardContent>
                     </Card>
 
-                    <div className="grid gap-6 md:grid-cols-2">
+                    {/* <div className="grid gap-6 md:grid-cols-2">
                         <ContextDisplay
                             title="Initial Context"
                             context={workflowRun?.initial_context}
@@ -180,7 +178,7 @@ export default function WorkflowRunPage() {
                             title="Gathered Context"
                             context={workflowRun?.gathered_context}
                         />
-                    </div>
+                    </div> */}
                 </div>
             </div>
         );
@@ -188,7 +186,7 @@ export default function WorkflowRunPage() {
     else {
         returnValue =
             <div className="min-h-screen mt-40">
-                <Pipecat
+                <BrowserCall
                     workflowId={Number(params.workflowId)}
                     workflowRunId={Number(params.runId)}
                     accessToken={accessToken}
