@@ -1,7 +1,6 @@
-import { Mic, MicOff } from "lucide-react";
+import { Mic, Phone, PhoneOff } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface AudioControlsProps {
     audioInputs: MediaDeviceInfo[];
@@ -28,7 +27,6 @@ export const AudioControls = ({
 }: AudioControlsProps) => {
     // Check if we have valid audio devices (permissions granted)
     const hasValidDevices = audioInputs.length > 0 && audioInputs.some(device => device.deviceId && device.deviceId.trim() !== '');
-    const validAudioInputs = audioInputs.filter(device => device.deviceId && device.deviceId.trim() !== '');
 
     const requestAudioPermissions = async () => {
         try {
@@ -40,64 +38,73 @@ export const AudioControls = ({
         }
     };
 
-    return (
-        <>
-            <div className="space-y-2">
-                <h3 className="text-sm font-medium">Audio Input</h3>
+    // Handle auto-selection of first device if none selected
+    if (hasValidDevices && !selectedAudioInput) {
+        const firstValidDevice = audioInputs.find(device => device.deviceId && device.deviceId.trim() !== '');
+        if (firstValidDevice) {
+            setSelectedAudioInput(firstValidDevice.deviceId);
+        }
+    }
 
-                {!hasValidDevices ? (
-                    <div className="space-y-3">
-                        <div className="flex items-center space-x-2 text-amber-600 bg-amber-50 p-3 rounded-md border border-amber-200">
-                            <MicOff className="h-4 w-4" />
-                            <span className="text-sm">Audio permissions are required to start the call</span>
-                        </div>
-                        <Button
-                            onClick={requestAudioPermissions}
-                            variant="outline"
-                            className="w-full"
-                        >
-                            <Mic className="h-4 w-4 mr-2" />
-                            Grant Audio Permissions
-                        </Button>
-                    </div>
-                ) : (
-                    <Select value={selectedAudioInput} onValueChange={setSelectedAudioInput}>
-                        <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select audio input" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {validAudioInputs.map((device, index) => (
-                                <SelectItem key={device.deviceId} value={device.deviceId}>
-                                    {device.label || `Audio Device #${index + 1}`}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                )}
+    if (isCompleted) {
+        return null; // The parent component will handle showing the loading state
+    }
+
+    if (!hasValidDevices) {
+        return (
+            <div className="flex flex-col items-center justify-center space-y-4 p-8">
+                <div className="text-center space-y-2">
+                    <p className="text-gray-700 font-medium">Audio permissions required</p>
+                    <p className="text-sm text-gray-500">Click below to grant microphone access</p>
+                </div>
+                <Button
+                    onClick={requestAudioPermissions}
+                    size="lg"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                    <Mic className="h-5 w-5 mr-2" />
+                    Grant Audio Permissions
+                </Button>
             </div>
+        );
+    }
 
-            {isCompleted && (
-                <div className="flex items-center space-x-4">
-                    <p className="text-red-500">
-                        Workflow run completed. Please refresh the page in a while to see the recording and transcript.
-                    </p>
-                </div>
+    return (
+        <div className="flex flex-col items-center justify-center space-y-6 p-8">
+            {!connectionActive ? (
+                <>
+                    <p className="text-sm text-gray-600">Ready to start your call</p>
+                    <button
+                        onClick={start}
+                        disabled={isStarting}
+                        className="group relative h-20 w-20 rounded-full bg-green-600 hover:bg-green-700 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                        aria-label="Start Call"
+                    >
+                        <div className="absolute inset-0 rounded-full bg-green-600 animate-ping opacity-25"></div>
+                        <div className="relative flex items-center justify-center h-full">
+                            <Phone className="h-8 w-8 text-white" />
+                        </div>
+                    </button>
+                    <p className="text-sm font-medium text-gray-700">Start Call</p>
+                </>
+            ) : (
+                <>
+                    <p className="text-sm text-gray-600">Call in progress</p>
+                    <button
+                        onClick={stop}
+                        className="group relative h-20 w-20 rounded-full bg-red-600 hover:bg-red-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                        aria-label="End Call"
+                    >
+                        <div className="relative flex items-center justify-center h-full">
+                            <PhoneOff className="h-8 w-8 text-white" />
+                        </div>
+                    </button>
+                    <p className="text-sm font-medium text-gray-700">End Call</p>
+                </>
             )}
-
-            {!isCompleted && hasValidDevices && (
-                <div className="flex items-center space-x-4">
-                    {!connectionActive ? (
-                        <Button onClick={start} disabled={isStarting}>
-                            {isStarting ? 'Starting...' : 'Start'}
-                        </Button>
-                    ) : (
-                        <Button onClick={stop} variant="destructive">Stop</Button>
-                    )}
-                    {permissionError && (
-                        <p className="text-red-500">{permissionError}</p>
-                    )}
-                </div>
+            {permissionError && (
+                <p className="text-sm text-red-500 text-center">{permissionError}</p>
             )}
-        </>
+        </div>
     );
 };

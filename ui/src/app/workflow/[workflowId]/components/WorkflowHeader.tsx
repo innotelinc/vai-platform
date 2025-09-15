@@ -2,17 +2,20 @@ import 'react-international-phone/style.css';
 
 import { ReactFlowInstance, ReactFlowJsonObject } from "@xyflow/react";
 import { AlertTriangle, CheckCheck, Download, LoaderCircle, Phone, ShieldCheck } from "lucide-react";
-import { useEffect,useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PhoneInput } from 'react-international-phone';
 
 import { initiateCallApiV1TwilioInitiateCallPost } from '@/client/sdk.gen';
 import { WorkflowError } from '@/client/types.gen';
 import { FlowEdge, FlowNode } from "@/components/flow/types";
+import { OnboardingTooltip } from '@/components/onboarding/OnboardingTooltip';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useOnboarding } from '@/context/OnboardingContext';
 import { useUserConfig } from "@/context/UserConfigContext";
 import { useAuth } from '@/lib/auth';
+import logger from '@/lib/logger';
 
 interface WorkflowHeaderProps {
     isDirty: boolean;
@@ -55,6 +58,7 @@ const handleExport = (workflow_name: string, workflow_definition: ReactFlowJsonO
 
 const WorkflowHeader = ({ isDirty, workflowName, rfInstance, onRun, workflowId, workflowValidationErrors, saveWorkflow }: WorkflowHeaderProps) => {
     const { userConfig, saveUserConfig } = useUserConfig();
+    const { hasSeenTooltip, markTooltipSeen } = useOnboarding();
     const [dialogOpen, setDialogOpen] = useState(false);
     const [phoneNumber, setPhoneNumber] = useState(userConfig?.test_phone_number || "");
     const [saving, setSaving] = useState(false);
@@ -65,9 +69,12 @@ const WorkflowHeader = ({ isDirty, workflowName, rfInstance, onRun, workflowId, 
     const [phoneChanged, setPhoneChanged] = useState(false);
     const [validationDialogOpen, setValidationDialogOpen] = useState(false);
     const { user, getAccessToken } = useAuth();
+    const webCallButtonRef = useRef<HTMLButtonElement>(null);
 
     const hasValidationErrors = workflowValidationErrors.length > 0;
     const isOSSDeployment = process.env.NEXT_PUBLIC_DEPLOYMENT_MODE === 'oss';
+
+    logger.info(`isOSSDeployment: ${isOSSDeployment}`);
 
     // Reset call-related state whenever the dialog is closed so that a new call can be placed
     useEffect(() => {
@@ -188,9 +195,16 @@ const WorkflowHeader = ({ isDirty, workflowName, rfInstance, onRun, workflowId, 
                 Export Pathway
             </Button>
             <Button
+                ref={webCallButtonRef}
                 variant="outline"
                 size="sm"
-                onClick={() => onRun("smallwebrtc")} // Don't change the mode since its defined in the database enum
+                onClick={() => {
+                    // Mark the tooltip as seen when the button is clicked
+                    if (!hasSeenTooltip('web_call')) {
+                        markTooltipSeen('web_call');
+                    }
+                    onRun("smallwebrtc"); // Don't change the mode since its defined in the database enum
+                }}
                 disabled={hasValidationErrors}
             >
                 <Phone className="mr-2 h-4 w-4" />
@@ -317,6 +331,16 @@ const WorkflowHeader = ({ isDirty, workflowName, rfInstance, onRun, workflowId, 
                     {callSuccessMsg && <div className="text-green-600 text-sm mt-2">{callSuccessMsg}</div>}
                 </DialogContent>
             </Dialog>
+
+            {/* Onboarding Tooltip */}
+            <OnboardingTooltip
+                title='Test your Voice Agent'
+                targetRef={webCallButtonRef}
+                message="Test this workflow now in your browser (no phone required)"
+                onDismiss={() => markTooltipSeen('web_call')}
+                showNext={false}
+                isVisible={!hasSeenTooltip('web_call') && !hasValidationErrors}
+            />
         </div>
     );
 };
