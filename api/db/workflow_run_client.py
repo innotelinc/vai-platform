@@ -70,7 +70,7 @@ class WorkflowRunClient(BaseDBClient):
 
             # Get the current storage backend based on ENABLE_AWS_S3 flag
             current_backend = StorageBackend.get_current_backend()
-            
+
             new_run = WorkflowRunModel(
                 name=name,
                 workflow=workflow,

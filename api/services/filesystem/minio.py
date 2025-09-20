@@ -1,11 +1,10 @@
 import asyncio
-from datetime import datetime, timedelta, timezone
+import json
 from typing import Any, BinaryIO, Dict, Optional
 
 from loguru import logger
 from minio import Minio
 from minio.error import S3Error
-import json
 
 from .base import BaseFileSystem
 
@@ -48,7 +47,7 @@ class MinioFileSystem(BaseFileSystem):
         try:
             if not self.client.bucket_exists(self.bucket_name):
                 self.client.make_bucket(self.bucket_name)
-            
+
             # Set anonymous download policy for local development
             # This allows unsigned URLs to work
             policy = {
@@ -58,11 +57,11 @@ class MinioFileSystem(BaseFileSystem):
                         "Effect": "Allow",
                         "Principal": {"AWS": "*"},
                         "Action": ["s3:GetObject"],
-                        "Resource": [f"arn:aws:s3:::{self.bucket_name}/*"]
+                        "Resource": [f"arn:aws:s3:::{self.bucket_name}/*"],
                     }
-                ]
+                ],
             }
-            
+
             self.client.set_bucket_policy(self.bucket_name, json.dumps(policy))
         except Exception as e:
             # Bucket might already exist or we might be in a restricted environment

@@ -63,9 +63,7 @@ def create_tts_service(user_config, audio_config: "AudioConfig"):
     """
     if user_config.tts.provider == ServiceProviders.DEEPGRAM.value:
         return DeepgramTTSService(
-            api_key=user_config.tts.api_key,
-            voice=user_config.tts.voice.value,
-            sample_rate=24000,
+            api_key=user_config.tts.api_key, voice=user_config.tts.voice.value
         )
     elif user_config.tts.provider == ServiceProviders.OPENAI.value:
         return OpenAITTSService(
@@ -91,7 +89,6 @@ def create_tts_service(user_config, audio_config: "AudioConfig"):
             api_key=user_config.tts.api_key,
             model=user_config.tts.model.value,
             voice=user_config.tts.voice.value,
-            sample_rate=24000,
         )
     else:
         raise HTTPException(

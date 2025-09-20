@@ -480,9 +480,9 @@ class PipecatEngine:
     async def _handle_start_node(self, node: Node) -> None:
         """Handle start node execution."""
         # Handle voicemail detection setup (before any returns)
-        # Lets check ENABLE_TRACING to make sure we have prompt access from 
+        # Lets check ENABLE_TRACING to make sure we have prompt access from
         # langfuse
-        if node.detect_voicemail and DEPLOYMENT_MODE == 'saas' and ENABLE_TRACING:
+        if node.detect_voicemail and DEPLOYMENT_MODE == "saas" and ENABLE_TRACING:
             if not self._audio_buffer:
                 logger.warning(
                     "Voicemail detection enabled but no audio buffer available - skipping detection"

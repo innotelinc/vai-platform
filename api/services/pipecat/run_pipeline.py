@@ -46,7 +46,7 @@ from pipecat.processors.filters.stt_mute_filter import (
     STTMuteStrategy,
 )
 from pipecat.processors.user_idle_processor import UserIdleProcessor
-from pipecat.transports.network.webrtc_connection import SmallWebRTCConnection
+from pipecat.transports.smallwebrtc.connection import SmallWebRTCConnection
 from pipecat.utils.context import set_current_run_id
 from pipecat.utils.tracing.context_registry import ContextProviderRegistry
 
