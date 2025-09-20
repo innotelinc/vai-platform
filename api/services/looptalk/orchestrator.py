@@ -7,13 +7,13 @@ from typing import Any, Dict, Optional
 
 from loguru import logger
 from pipecat.pipeline.task import PipelineTask
-from pipecat.transports import (
-    InternalTransport,
-    InternalTransportManager,
-)
 from pipecat.utils.context import set_current_run_id
 
 from api.db.db_client import DBClient
+from api.services.looptalk.internal_transport import (
+    InternalTransport,
+    InternalTransportManager,
+)
 from api.services.pipecat.transport_setup import create_internal_transport
 
 from .core.pipeline_builder import LoopTalkPipelineBuilder

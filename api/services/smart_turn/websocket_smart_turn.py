@@ -122,9 +122,9 @@ class WebSocketSmartTurnAnalyzer(BaseSmartTurn):
         logger.debug("Establishing new WebSocket connection to Smart-Turn service...")
 
         # Prepare headers
-        extra_headers = dict(self._headers)
+        additional_headers = dict(self._headers)
         if self._service_context is not None:
-            extra_headers["X-Service-Context"] = str(self._service_context)
+            additional_headers["X-Service-Context"] = str(self._service_context)
 
         # _init_sample_rate is being set in the constructor, which we should
         # use in case self._sample_rate is not set yet. The actual _sample_rate
@@ -135,7 +135,7 @@ class WebSocketSmartTurnAnalyzer(BaseSmartTurn):
         _sample_rate = self._sample_rate or self._init_sample_rate
 
         if _sample_rate > 0:
-            extra_headers["X-Sample-Rate"] = str(_sample_rate)
+            additional_headers["X-Sample-Rate"] = str(_sample_rate)
 
         max_attempts = 3
         for attempt in range(max_attempts):
@@ -148,7 +148,7 @@ class WebSocketSmartTurnAnalyzer(BaseSmartTurn):
                 # Connect with websockets library
                 self._ws = await websockets.connect(
                     self._url,
-                    extra_headers=extra_headers,
+                    additional_headers=additional_headers,
                     ping_interval=5.0,  # let websockets send pings every 5s
                     ping_timeout=3.0,  # fail fast if no pong in 3s
                     close_timeout=10,

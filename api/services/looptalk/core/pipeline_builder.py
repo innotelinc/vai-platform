@@ -9,10 +9,10 @@ from pipecat.processors.filters.stt_mute_filter import (
     STTMuteFilter,
     STTMuteStrategy,
 )
-from pipecat.transports import InternalTransport
 
 from api.db.db_client import DBClient
 from api.services.looptalk.audio_streamer import get_or_create_audio_streamer
+from api.services.looptalk.internal_transport import InternalTransport
 from api.services.pipecat.audio_config import AudioConfig
 from api.services.pipecat.pipeline_builder import (
     create_pipeline_components,

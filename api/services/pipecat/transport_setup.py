@@ -3,6 +3,7 @@ import os
 from fastapi import WebSocket
 
 from api.constants import APP_ROOT_DIR, ENABLE_RNNOISE, ENABLE_SMART_TURN
+from api.services.looptalk.internal_transport import InternalTransport
 from api.services.pipecat.audio_config import AudioConfig
 from api.services.smart_turn.websocket_smart_turn import (
     WebSocketSmartTurnAnalyzer,
@@ -14,19 +15,18 @@ from api.services.telephony.stasis_rtp_transport import (
     StasisRTPTransportParams,
 )
 from pipecat.audio.filters.rnnoise_filter import RNNoiseFilter
-from pipecat.audio.mixers.silence_audio_mixer import SilenceAudioMixer
+from pipecat.audio.mixers.silence_mixer import SilenceAudioMixer
 from pipecat.audio.mixers.soundfile_mixer import SoundfileMixer
 from pipecat.audio.turn.smart_turn.base_smart_turn import SmartTurnParams
 from pipecat.audio.vad.silero import SileroVADAnalyzer, VADParams
 from pipecat.serializers.twilio import TwilioFrameSerializer
-from pipecat.transports import InternalTransport
 from pipecat.transports.base_transport import TransportParams
-from pipecat.transports.network.fastapi_websocket import (
+from pipecat.transports.smallwebrtc.connection import SmallWebRTCConnection
+from pipecat.transports.smallwebrtc.transport import SmallWebRTCTransport
+from pipecat.transports.websocket.fastapi import (
     FastAPIWebsocketParams,
     FastAPIWebsocketTransport,
 )
-from pipecat.transports.network.small_webrtc import SmallWebRTCTransport
-from pipecat.transports.network.webrtc_connection import SmallWebRTCConnection
 
 librnnoise_path = os.path.normpath(
     str(APP_ROOT_DIR / "native" / "rnnoise" / "librnnoise.so")

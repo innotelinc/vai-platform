@@ -65,12 +65,15 @@ class MPSServiceKeyClient:
                 data = response.json()
                 # Transform the response to match our expected format
                 return {
-                    "id": data.get("id"),  
-                    "name": data.get("name") or name,  
-                    "service_key": data.get("service_key"), 
-                    "key_prefix": data.get("key_prefix") or (data.get("service_key", "")[:8]
-                    if data.get("service_key")
-                    else ""),
+                    "id": data.get("id"),
+                    "name": data.get("name") or name,
+                    "service_key": data.get("service_key"),
+                    "key_prefix": data.get("key_prefix")
+                    or (
+                        data.get("service_key", "")[:8]
+                        if data.get("service_key")
+                        else ""
+                    ),
                     "expires_at": data.get("expires_at"),
                     "created_at": data.get("created_at"),
                     "is_active": data.get("is_active", True),
