@@ -245,13 +245,6 @@ class VoicemailDetector:
                 # Send end task frame with metadata (including optional S3 path)
                 await self._engine.send_end_task_frame(
                     reason=EndTaskReason.VOICEMAIL_DETECTED.value,
-                    additional_metadata={
-                        "voicemail_transcript": transcript,
-                        "voicemail_confidence": confidence,
-                        "voicemail_reasoning": reasoning,
-                        "voicemail_detection_duration": self.detection_duration,
-                        "voicemail_audio_s3_path": s3_path,
-                    },
                     abort_immediately=True,
                 )
             else:

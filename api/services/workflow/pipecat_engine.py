@@ -83,6 +83,7 @@ class PipecatEngine:
         self._audio_buffer = audio_buffer
         self._workflow_run_id = workflow_run_id
         self._initialized = False
+        self._client_disconnected = False
         self._pending_function_calls = 0
         self._current_node: Optional[Node] = None
         self._gathered_context: dict = {}
@@ -602,7 +603,6 @@ class PipecatEngine:
     async def send_end_task_frame(
         self,
         reason: str,
-        additional_metadata: dict = None,
         abort_immediately: bool = False,
     ):
         """
@@ -620,6 +620,11 @@ class PipecatEngine:
         organization_id = await get_organization_id_from_workflow_run(
             self._workflow_run_id
         )
+
+        # If client is disconnected before we get a chance to disconnect from
+        # the bot, lets consider that as final disposition
+        if self._client_disconnected:
+            call_disposition = EndTaskReason.USER_HANGUP.value
 
         if call_disposition:
             # If call_disposition exists, map it
@@ -709,19 +714,6 @@ class PipecatEngine:
                     "Sorry! It seems like our time has exceeded. Someone from our team will reach out to you soon. Thank you!"
                 )
             )
-
-        metadata = {
-            # Keep original reason in metadata, which would be used to decide
-            # whether to disconnect or to transfer the call in the transport
-            "reason": reason,
-            "call_transfer_context": call_transfer_context,
-        }
-
-        # Add any additional metadata
-        if additional_metadata:
-            metadata.update(additional_metadata)
-
-        frame_to_push.metadata = metadata
 
         # Store the original reason for later retrieval in event handler
         self._call_disposition = mapped_disposition
@@ -872,14 +864,6 @@ class PipecatEngine:
         """Create a callback that corrects corrupted aggregation using reference text."""
         return engine_callbacks.create_aggregation_correction_callback(self)
 
-    def get_call_disposition(self) -> Optional[str]:
-        """Get the disconnect reason set by the engine."""
-        return self._call_disposition
-
-    def get_gathered_context(self) -> dict:
-        """Get the gathered context including extracted variables."""
-        return self._gathered_context.copy()
-
     def set_context(self, context: OpenAILLMContext) -> None:
         """Set the OpenAI LLM context.
 
@@ -924,6 +908,26 @@ class PipecatEngine:
     async def handle_llm_text_frame(self, text: str):
         """Accumulate LLM text frames to build reference text."""
         self._current_llm_reference_text += text
+
+    async def handle_client_disconnected(self):
+        """Handle client disconnected event."""
+        self._client_disconnected = True
+
+    async def get_call_disposition(self) -> Optional[str]:
+        """Get the disconnect reason set by the engine."""
+        if self._call_disposition:
+            # We would have a _call_disposition variable set if we have initiated
+            # a disconnect from the bot, i.e we have called send_end_task_frame.
+            return self._call_disposition
+
+        if self._client_disconnected:
+            return EndTaskReason.USER_HANGUP.value
+        else:
+            return EndTaskReason.UNKNOWN.value
+
+    async def get_gathered_context(self) -> dict:
+        """Get the gathered context including extracted variables."""
+        return self._gathered_context.copy()
 
     async def cleanup(self):
         """Clean up engine resources on disconnect."""

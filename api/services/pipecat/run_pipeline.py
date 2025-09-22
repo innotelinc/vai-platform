@@ -11,6 +11,7 @@ from api.services.pipecat.engine_pre_aggregator_processor import (
 )
 from api.services.pipecat.event_handlers import (
     register_audio_data_handler,
+    register_task_event_handler,
     register_transcript_handler,
     register_transport_event_handlers,
 )
@@ -361,16 +362,28 @@ async def _run_pipeline(
     # Register event handlers
     in_memory_audio_buffer, in_memory_transcript_buffer = (
         register_transport_event_handlers(
+            task,
             transport,
             workflow_run_id,
-            audio_buffer,
-            task,
             engine=engine,
-            usage_metrics_aggregator=pipeline_metrics_aggregator,
+            audio_buffer=audio_buffer,
             audio_synchronizer=audio_synchronizer,
             audio_config=audio_config,
         )
     )
+
+    register_task_event_handler(
+        workflow_run_id,
+        engine,
+        task,
+        transport,
+        audio_buffer,
+        audio_synchronizer,
+        in_memory_audio_buffer,
+        in_memory_transcript_buffer,
+        pipeline_metrics_aggregator,
+    )
+
     register_audio_data_handler(
         audio_synchronizer, workflow_run_id, in_memory_audio_buffer
     )

@@ -299,7 +299,7 @@ class WorkerEventSubscriber:
             if channel_id in self._active_tasks:
                 del self._active_tasks[channel_id]
 
-    async def _process_cleanup(self, channel_id: str, reason: str):
+    async def _process_cleanup(self, channel_id: str):
         """Process call cleanup in the background."""
         try:
             if channel_id in self._active_connections:
@@ -317,7 +317,7 @@ class WorkerEventSubscriber:
                 if connection.workflow_run_id:
                     set_current_run_id(connection.workflow_run_id)
 
-                await connection.handle_remote_disconnect(reason)
+                await connection.handle_remote_disconnect()
                 del self._active_connections[channel_id]
         except Exception as e:
             logger.exception(f"Error during cleanup for {channel_id}: {e}")
@@ -330,7 +330,7 @@ class WorkerEventSubscriber:
         """Handle call termination."""
         channel_id = event.channel_id
         logger.info(
-            f"channelID: {channel_id} Worker {self.worker_id} handling StasisEnd, Reason: {event.reason}"
+            f"channelID: {channel_id} Worker {self.worker_id} handling StasisEnd"
         )
 
         # Create a background task to handle the cleanup
@@ -344,7 +344,7 @@ class WorkerEventSubscriber:
                 # connection to be invoked from the pipeline before
                 # caling remote disconnect
                 task = asyncio.create_task(
-                    self._process_cleanup(channel_id, event.reason),
+                    self._process_cleanup(channel_id),
                     name=f"cleanup_handler_{channel_id}",
                 )
                 self._cleanup_tasks[channel_id] = task

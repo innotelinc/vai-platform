@@ -26,6 +26,8 @@ from api.services.telephony.stasis_event_protocol import (
     RedisChannels,
     RedisKeys,
     SocketClosedCommand,
+    StasisEndEvent,
+    StasisStartEvent,
     TransferCommand,
     parse_command,
 )
@@ -123,13 +125,12 @@ class ARIManager:
         # Publish StasisEnd event to worker immediately
         if connection and caller_channel_id:
             worker_id = self._get_worker_for_channel(caller_channel_id)
-            event = {
-                "type": "stasis_end",
-                "channel_id": caller_channel_id,
-                "reason": EndTaskReason.USER_HANGUP.value,
-            }
+            event = StasisEndEvent(
+                channel_id=caller_channel_id,
+                reason=EndTaskReason.USER_HANGUP.value,
+            )
             await self.redis.publish(
-                RedisChannels.worker_events(worker_id), json.dumps(event)
+                RedisChannels.worker_events(worker_id), event.to_json()
             )
             logger.info(f"channelID: {channel_id} Published StasisEnd event")
 
@@ -163,16 +164,17 @@ class ARIManager:
             self._active_channels.add(channel_id)
 
             # Create event with all connection details
-            event = {
-                "type": "stasis_start",
-                "channel_id": channel_id,
-                "caller_channel_id": channel_id,
-                "em_channel_id": em_channel_id,
-                "bridge_id": bridge_id,
-                "local_addr": list(connection.local_addr),
-                "remote_addr": list(connection.remote_addr),
-                "call_context_vars": call_context_vars,
-            }
+            event = StasisStartEvent(
+                channel_id=channel_id,
+                caller_channel_id=channel_id,
+                em_channel_id=em_channel_id,
+                bridge_id=bridge_id,
+                local_addr=list(connection.local_addr),
+                remote_addr=list(connection.remote_addr)
+                if connection.remote_addr
+                else None,
+                call_context_vars=call_context_vars,
+            )
 
             # Select worker using round-robin
             worker_id = await self._select_worker()
@@ -186,7 +188,7 @@ class ARIManager:
             channel = RedisChannels.worker_events(worker_id)
 
             # Publish event to specific worker
-            await self.redis.publish(channel, json.dumps(event))
+            await self.redis.publish(channel, event.to_json())
             logger.info(
                 f"channelID: {channel_id} Published stasis_start event to worker {worker_id}"
             )
@@ -416,10 +418,8 @@ class ARIManager:
     ):
         """Execute commands from workers."""
         if isinstance(command, DisconnectCommand):
-            logger.info(
-                f"channelID: {channel_id} Worker requested disconnect: {command.reason}"
-            )
-            await connection.disconnect(command.reason)
+            logger.info(f"channelID: {channel_id} Worker requested disconnect")
+            await connection.disconnect()
 
         elif isinstance(command, TransferCommand):
             logger.info(f"channelID: {channel_id} Worker requested transfer")

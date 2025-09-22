@@ -16,7 +16,6 @@ import struct
 from typing import TYPE_CHECKING, AsyncIterator, Optional
 
 from loguru import logger
-from pipecat.utils.enums import EndTaskReason
 
 if TYPE_CHECKING:
     from api.services.telephony.stasis_rtp_connection import StasisRTPConnection
@@ -113,9 +112,6 @@ class StasisRTPClient:
         self._closing = False
         self._recv_sock_ready = asyncio.Event()  # Signal when recv socket is ready
         self._leave_counter = 0  # Track input/output transport usage
-        self._fallback_disconnect_timer: Optional[asyncio.Task] = (
-            None  # Safety timer for disconnect
-        )
 
         # ── wire event handlers to the connection ────────────────
         @self._connection.event_handler("connected")
@@ -126,27 +122,10 @@ class StasisRTPClient:
             )
 
         @self._connection.event_handler("disconnected")
-        async def _on_disconnected(_: Any, reason: str):
-            # Cancel the safety timer if it exists. We start the safety timer when
-            # sending disconnect or transfer from the engine, i.e when the disconnect()
-            # method of the StasisRTPClient is called during wind down of the pipeline.
-            # We start the timer so that if we don't get the remote hangup in a given
-            # duration, we will call client disconnected handler.
-            if (
-                self._fallback_disconnect_timer
-                and not self._fallback_disconnect_timer.done()
-            ):
-                self._fallback_disconnect_timer.cancel()
-                self._fallback_disconnect_timer = None
-
-            if not self._closing:
-                # Mark the client as closing, so that when the pipeline is
-                # cancelled or getting closed, we don't try start the fallback
-                # disconnect timer and return safely from disconnect
-                self._closing = True
-
+        async def _on_disconnected(_: Any):
+            logger.debug("In _on_disconnected of StasisRTPClient")
             await self._callbacks.on_client_disconnected(
-                self._connection.caller_channel_id, reason
+                self._connection.caller_channel_id
             )
 
     # ─── public helpers ──────────────────────────────────────────
@@ -161,20 +140,16 @@ class StasisRTPClient:
             return
         await self._connection.connect()
 
-    async def disconnect(
-        self,
-        reason: str = EndTaskReason.UNKNOWN.value,
-        call_transfer_context: dict = {},  # Keep parameter for backward compatibility
-    ):
+    async def disconnect(self):
         """Disconnect from the RTP socket."""
         # Decrement leave counter when disconnect is called
         logger.debug(f"StasisRTPClient.disconnect leave_counter: {self._leave_counter}")
         self._leave_counter -= 1
         if self._leave_counter > 0:
             # Early return - InputTransport called first, OutputTransport will call later
+            # Only proceed when counter reaches 0 (OutputTransport's call)
             return
 
-        # Only proceed when counter reaches 0 (OutputTransport's call)
         # Close sockets
         logger.debug("Going to close sockets")
         await self._close_sockets()
@@ -186,33 +161,12 @@ class StasisRTPClient:
             return
         self._closing = True
 
-        # Create a safety timer that will call on_client_disconnected if we don't
-        # get StasisEnd from the dialer within 5 seconds. StasisEnd is needed to
-        # trigger on_client_disconnected handler in the event_handlers
-        async def _fallback_disconnect_timeout():
-            await asyncio.sleep(5.0)
-            logger.warning(
-                "Disconnect event not received within 5 seconds, calling on_client_disconnected as fallback"
-            )
-            await self._callbacks.on_client_disconnected(
-                self._connection.caller_channel_id
-            )
-
-        self._fallback_disconnect_timer = asyncio.create_task(
-            _fallback_disconnect_timeout()
-        )
-
-        # Only call disconnect if not a transfer (transfer already handled in PipecatEngine)
-        # NOTE: Transfer now happens immediately in PipecatEngine.send_end_task_frame()
-        if reason != EndTaskReason.USER_QUALIFIED.value:
-            try:
-                await self._connection.disconnect(reason)
-            except Exception as exc:
-                logger.error(f"Failed to disconnect RTP connection: {exc}")
-        else:
-            logger.debug(
-                "Skipping disconnect call for USER_QUALIFIED - transfer already initiated by engine"
-            )
+        # If we have initiated transfer before, we would ignore _connection.disconnect()
+        # in the connection. (since is_closing would be set by transfer)
+        try:
+            await self._connection.disconnect()
+        except Exception as exc:
+            logger.error(f"Failed to disconnect RTP connection: {exc}")
 
     # ─── socket management ──────────────────────────────────────
 

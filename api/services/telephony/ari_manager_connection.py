@@ -189,7 +189,7 @@ class ARIManagerConnection(BaseObject):
                 f"channelID: {self.caller_channel_id} Failed to sync data to ARI_DATA_SYNCING_URI: {e}"
             )
 
-    async def disconnect(self, reason: str):
+    async def disconnect(self):
         """Instruct Asterisk to hang-up the call and perform cleanup."""
         if self._closed:
             return
@@ -206,7 +206,7 @@ class ARIManagerConnection(BaseObject):
                 caller_channel = await self._get_channel(self.caller_channel_id)
                 if caller_channel:
                     logger.debug(
-                        f"channelID: {self.caller_channel_id} Hanging up caller channel due to reason: {reason}"
+                        f"channelID: {self.caller_channel_id} Hanging up caller channel"
                     )
                     await caller_channel.hangup()
         except Exception:
