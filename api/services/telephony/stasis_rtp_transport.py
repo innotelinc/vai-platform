@@ -23,7 +23,6 @@ from pipecat.transports.base_output import (
     TransportClientNotConnectedException,
 )
 from pipecat.transports.base_transport import BaseTransport, TransportParams
-from pipecat.utils.enums import EndTaskReason
 from pydantic import BaseModel
 
 from api.services.telephony.stasis_rtp_client import StasisRTPClient
@@ -40,9 +39,7 @@ class StasisRTPCallbacks(BaseModel):
     """Callbacks for Stasis RTP transport events."""
 
     on_client_connected: Callable[[str], Awaitable[None]]
-    on_client_disconnected: Callable[
-        [str, Optional[str]], Awaitable[None]
-    ]  # Added optional disconnect reason
+    on_client_disconnected: Callable[[str], Awaitable[None]]
     on_client_closed: Callable[[str], Awaitable[None]]
 
 
@@ -116,22 +113,14 @@ class StasisRTPInputTransport(BaseInputTransport):
         """Stop the input transport."""
         await super().stop(frame)
         await self._stop_tasks()
-        # Call disconnect on the client when EndFrame is encountered
-        await self._client.disconnect(
-            frame.metadata.get("reason", EndTaskReason.UNKNOWN.value),
-            frame.metadata.get("call_transfer_context", {}),
-        )
+        await self._client.disconnect()
         logger.debug("Successfully disconnected from StasisRTPClient")
 
     async def cancel(self, frame: CancelFrame):
         """Cancel the input transport."""
         await super().cancel(frame)
         await self._stop_tasks()
-        # Call disconnect on the client when CancelFrame is encountered
-        await self._client.disconnect(
-            frame.metadata.get("reason", EndTaskReason.SYSTEM_CANCELLED.value),
-            frame.metadata.get("call_transfer_context", {}),
-        )
+        await self._client.disconnect()
 
     async def _receive_audio(self):
         try:
@@ -198,22 +187,12 @@ class StasisRTPOutputTransport(BaseOutputTransport):
     async def stop(self, frame: EndFrame):
         """Stop the output transport."""
         await super().stop(frame)
-
-        # Call disconnect on the client when EndFrame is encountered
-        # The client will check its _leave_counter and decide whether to close sockets
-        await self._client.disconnect(
-            frame.metadata.get("reason", EndTaskReason.UNKNOWN.value),
-            frame.metadata.get("call_transfer_context", {}),
-        )
+        await self._client.disconnect()
 
     async def cancel(self, frame: CancelFrame):
         """Cancel the output transport."""
         await super().cancel(frame)
-        # Call disconnect on the client when CancelFrame is encountered
-        await self._client.disconnect(
-            frame.metadata.get("reason", EndTaskReason.SYSTEM_CANCELLED.value),
-            frame.metadata.get("call_transfer_context", {}),
-        )
+        await self._client.disconnect()
 
     async def send_message(
         self, frame: TransportMessageFrame | TransportMessageUrgentFrame
@@ -317,8 +296,8 @@ class StasisRTPTransport(BaseTransport):
     async def _on_client_connected(self, chan_id: str):
         await self._call_event_handler("on_client_connected", chan_id)
 
-    async def _on_client_disconnected(self, chan_id: str, reason: Optional[str] = None):
-        await self._call_event_handler("on_client_disconnected", chan_id, reason)
+    async def _on_client_disconnected(self, chan_id: str):
+        await self._call_event_handler("on_client_disconnected", chan_id)
 
     async def _on_client_closed(self, chan_id: str):
         await self._call_event_handler("on_client_closed", chan_id)

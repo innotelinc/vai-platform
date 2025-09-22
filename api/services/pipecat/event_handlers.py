@@ -1,9 +1,8 @@
-from typing import Optional
-
 from loguru import logger
 
 from api.db import db_client
 from api.services.campaign.call_dispatcher import campaign_call_dispatcher
+from api.services.pipecat.audio_config import AudioConfig
 from api.services.pipecat.audio_transcript_buffers import (
     InMemoryAudioBuffer,
     InMemoryTranscriptBuffer,
@@ -16,20 +15,20 @@ from api.services.workflow.disposition_mapper import (
 from api.services.workflow.pipecat_engine import PipecatEngine
 from api.tasks.arq import enqueue_job
 from api.tasks.function_names import FunctionNames
+from pipecat.frames.frames import Frame
 from pipecat.pipeline.task import PipelineTask
-from pipecat.transports.base_transport import BaseTransport
-from pipecat.utils.enums import EndTaskReason
+from pipecat.processors.audio.audio_buffer_processor import AudioBuffer
+from pipecat.processors.audio.audio_synchronizer import AudioSynchronizer
 
 
 def register_transport_event_handlers(
+    task: PipelineTask,
     transport,
     workflow_run_id,
-    audio_buffer,
-    task: PipelineTask,
     engine: PipecatEngine,
-    usage_metrics_aggregator: PipelineMetricsAggregator,
-    audio_synchronizer=None,
-    audio_config=None,
+    audio_buffer: AudioBuffer,
+    audio_synchronizer: AudioSynchronizer,
+    audio_config=AudioConfig,
 ):
     """Register event handlers for transport events"""
 
@@ -58,51 +57,54 @@ def register_transport_event_handlers(
         await engine.initialize()
 
     @transport.event_handler("on_client_disconnected")
-    async def on_client_disconnected(
-        transport: BaseTransport,
-        participant,
-        transport_disconnect_reason: Optional[str] = None,
+    async def on_client_disconnected(transport, participant):
+        logger.debug("In on_client_disconnected callback handler")
+        await engine.handle_client_disconnected()
+
+        # Stop recordings
+        await audio_buffer.stop_recording()
+        if audio_synchronizer:
+            await audio_synchronizer.stop_recording()
+
+        # Cancel the task since the client is disconnected
+        await task.cancel()
+
+    # Return the buffers so they can be passed to other handlers
+    return in_memory_audio_buffer, in_memory_transcript_buffer
+
+
+def register_task_event_handler(
+    workflow_run_id: int,
+    engine: PipecatEngine,
+    task: PipelineTask,
+    transport,
+    audio_buffer: AudioBuffer,
+    audio_synchronizer: AudioSynchronizer,
+    in_memory_audio_buffer: InMemoryAudioBuffer,
+    in_memory_transcript_buffer: InMemoryTranscriptBuffer,
+    pipeline_metrics_aggregator: PipelineMetricsAggregator,
+):
+    @task.event_handler("on_pipeline_finished")
+    async def on_pipeline_finished(
+        task: PipelineTask,
+        frame: Frame,
     ):
-        logger.debug(
-            f"In on_client_disconnected callback handler, disconnect_reason: {transport_disconnect_reason}"
-        )
+        logger.debug(f"In on_pipeline_finished callback handler")
 
         workflow_run = await db_client.get_workflow_run_by_id(workflow_run_id)
 
-        # First priority: Check if engine has a disconnect reason (local disconnect)
-        engine_call_disposition = engine.get_call_disposition()
-        gathered_context = engine.get_gathered_context()
+        # Stop recordings
+        await audio_buffer.stop_recording()
+        if audio_synchronizer:
+            await audio_synchronizer.stop_recording()
+
+        call_disposition = await engine.get_call_disposition()
+        logger.debug(f"call disposition in on_pipeline_finished: {call_disposition}")
+
+        gathered_context = await engine.get_gathered_context()
 
         # also consider existing gathered context in workflow_run
         gathered_context = {**gathered_context, **workflow_run.gathered_context}
-
-        if engine_call_disposition:
-            # Engine has set a disconnect reason - this takes priority
-            call_disposition = engine_call_disposition
-            logger.debug(f"Engine disposition detected, code: {call_disposition}")
-        elif transport_disconnect_reason:
-            # TODO: Make this more generic using some DSL or equivalent. This is currently
-            # configured to work for Kapil's bot
-            call_duration = usage_metrics_aggregator.get_call_duration()
-            if transport_disconnect_reason == EndTaskReason.USER_HANGUP.value:
-                if call_duration < 10:
-                    call_disposition = "HU"
-                else:
-                    call_disposition = "NIBP"
-            else:
-                # Transport provided a disconnect reason (remote hangup)
-                call_disposition = transport_disconnect_reason
-            logger.debug(
-                f"Remote disconnect detected, reason: {call_disposition} duration: {call_duration}"
-            )
-        else:
-            # No reason provided - assume user hangup
-            call_disposition = EndTaskReason.UNKNOWN.value
-            logger.debug("No disposition found from either engine or transport")
-
-        # Cancel task only when no engine disconnect reason (remote disconnect)
-        if not engine_call_disposition:
-            await task.cancel()
 
         organization_id = await get_organization_id_from_workflow_run(workflow_run_id)
         mapped_call_disposition = await apply_disposition_mapping(
@@ -111,6 +113,7 @@ def register_transport_event_handlers(
 
         gathered_context.update({"mapped_call_disposition": mapped_call_disposition})
 
+        # Set user_speech call tag
         if in_memory_transcript_buffer:
             call_tags = gathered_context.get("call_tags", [])
 
@@ -131,10 +134,6 @@ def register_transport_event_handlers(
 
         # Clean up engine resources (including voicemail detector)
         await engine.cleanup()
-
-        await audio_buffer.stop_recording()
-        if audio_synchronizer:
-            await audio_synchronizer.stop_recording()
 
         # ------------------------------------------------------------------
         # Close Smart-Turn WebSocket if the transport's analyzer supports it
@@ -163,7 +162,7 @@ def register_transport_event_handlers(
         except Exception as exc:
             logger.warning(f"Failed to close Smart-Turn analyzer gracefully: {exc}")
 
-        usage_info = usage_metrics_aggregator.get_all_usage_metrics_serialized()
+        usage_info = pipeline_metrics_aggregator.get_all_usage_metrics_serialized()
 
         logger.debug(f"Usage metrics: {usage_info}")
 
@@ -208,9 +207,6 @@ def register_transport_event_handlers(
         await enqueue_job(
             FunctionNames.RUN_INTEGRATIONS_POST_WORKFLOW_RUN, workflow_run_id
         )
-
-    # Return the buffers so they can be passed to other handlers
-    return in_memory_audio_buffer, in_memory_transcript_buffer
 
 
 def register_audio_data_handler(
