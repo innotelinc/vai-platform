@@ -1,4 +1,4 @@
-import { useCallback,useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { client } from "@/client/client.gen";
 import { validateUserConfigurationsApiV1UserConfigurationsUserValidateGet, validateWorkflowApiV1WorkflowWorkflowIdValidatePost } from "@/client/sdk.gen";
@@ -100,8 +100,37 @@ export const useWebSocketRTC = ({ workflowId, workflowRunId, accessToken, initia
             logger.info(`ICE connection state changed: ${pc.iceConnectionState}`);
             if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
                 setConnectionStatus('connected');
-            } else if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
+            } else if (pc.iceConnectionState === 'failed') {
                 setConnectionStatus('failed');
+            } else if (pc.iceConnectionState === 'disconnected') {
+                // Server-initiated disconnect - clean up gracefully
+                logger.info('Server initiated disconnect - cleaning up connection');
+
+                // Close WebSocket if still open
+                if (wsRef.current) {
+                    wsRef.current.close();
+                    wsRef.current = null;
+                }
+
+                // Mark as completed to trigger recording check
+                setConnectionActive(false);
+                setIsCompleted(true);
+                setConnectionStatus('idle');
+
+                // Clean up peer connection
+                if (pc.getTransceivers) {
+                    pc.getTransceivers().forEach((transceiver) => {
+                        if (transceiver.stop) {
+                            transceiver.stop();
+                        }
+                    });
+                }
+
+                pc.getSenders().forEach((sender) => {
+                    if (sender.track) {
+                        sender.track.stop();
+                    }
+                });
             }
         });
 
@@ -136,7 +165,8 @@ export const useWebSocketRTC = ({ workflowId, workflowRunId, accessToken, initia
             ws.onclose = () => {
                 logger.info('WebSocket closed');
                 wsRef.current = null;
-                if (connectionActive) {
+                // Don't set failed status if already completed (graceful disconnect)
+                if (connectionActive && !isCompleted) {
                     setConnectionStatus('failed');
                 }
             };
@@ -193,7 +223,7 @@ export const useWebSocketRTC = ({ workflowId, workflowRunId, accessToken, initia
                 }
             };
         });
-    }, [getWebSocketUrl, connectionActive]);
+    }, [getWebSocketUrl, connectionActive, isCompleted]);
 
     const negotiate = async () => {
         const pc = pcRef.current;
