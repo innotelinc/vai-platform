@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 
+import { getWorkflowsApiV1WorkflowFetchGet } from "@/client/sdk.gen";
 import SignInClient from "@/components/SignInClient";
-import { getServerAuthProvider,getServerUser } from "@/lib/auth/server";
+import { getServerAccessToken,getServerAuthProvider,getServerUser } from "@/lib/auth/server";
 import logger from '@/lib/logger';
 import { getRedirectUrl } from "@/lib/utils";
 
@@ -12,10 +13,41 @@ export default async function Home() {
   const authProvider = getServerAuthProvider();
   logger.debug('[HomePage] Auth provider:', authProvider);
 
-  // For local/OSS provider, always redirect to workflow page
+  // For local/OSS provider, check if user has workflows
   if (authProvider === 'local') {
-    logger.debug('[HomePage] Redirecting to workflow page for local provider');
-    redirect('/create-workflow');
+    logger.debug('[HomePage] Local provider detected, checking for workflows');
+
+    try {
+      const accessToken = await getServerAccessToken();
+      if (accessToken) {
+        const workflowsResponse = await getWorkflowsApiV1WorkflowFetchGet({
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        const workflows = workflowsResponse.data ? (Array.isArray(workflowsResponse.data) ? workflowsResponse.data : [workflowsResponse.data]) : [];
+        const activeWorkflows = workflows.filter(w => w.status === 'active');
+
+        logger.debug('[HomePage] Found workflows for local provider:', {
+          total: workflows.length,
+          active: activeWorkflows.length
+        });
+
+        if (activeWorkflows.length > 0) {
+          logger.debug('[HomePage] Redirecting to /workflow - user has workflows');
+          redirect('/workflow');
+        } else {
+          logger.debug('[HomePage] Redirecting to /create-workflow - no workflows found');
+          redirect('/create-workflow');
+        }
+      }
+    } catch (error) {
+      logger.error('[HomePage] Error checking workflows for local provider:', error);
+      // Default to create-workflow on error
+      logger.debug('[HomePage] Defaulting to /create-workflow due to error');
+      redirect('/create-workflow');
+    }
   }
 
   logger.debug('[HomePage] Getting server user...');
