@@ -1,7 +1,7 @@
 from typing import Annotated, Optional
 
 import httpx
-from fastapi import Header, HTTPException
+from fastapi import Header, HTTPException, Query, WebSocket
 from loguru import logger
 from pydantic import ValidationError
 
@@ -328,3 +328,26 @@ async def get_superuser(
         )
 
     return user
+
+
+async def get_user_ws(
+    websocket: WebSocket,
+    token: str = Query(None),
+) -> UserModel:
+    """
+    WebSocket authentication dependency.
+    Uses token from query parameters for authentication.
+    """
+    if not token:
+        await websocket.close(code=1008, reason="Missing authentication token")
+        raise HTTPException(status_code=401, detail="Missing authentication token")
+
+    # Use the same logic as get_user but with token from query
+    authorization = f"Bearer {token}"
+
+    try:
+        user = await get_user(authorization)
+        return user
+    except HTTPException as e:
+        await websocket.close(code=1008, reason=e.detail)
+        raise

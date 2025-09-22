@@ -11,7 +11,7 @@ import {
     ConnectionStatus,
     WorkflowConfigErrorDialog
 } from "./components";
-import { useWebRTC } from "./hooks";
+import { useWebSocketRTC } from "./hooks";
 
 const BrowserCall = ({ workflowId, workflowRunId, accessToken, initialContextVariables }: {
     workflowId: number,
@@ -40,7 +40,7 @@ const BrowserCall = ({ workflowId, workflowRunId, accessToken, initialContextVar
         start,
         stop,
         isStarting
-    } = useWebRTC({ workflowId, workflowRunId, accessToken, initialContextVariables });
+    } = useWebSocketRTC({ workflowId, workflowRunId, accessToken, initialContextVariables });
 
     // Poll for recording availability after call ends
     useEffect(() => {

@@ -1,20 +1,21 @@
-import { useRef, useState } from "react";
+import { useCallback,useEffect, useRef, useState } from "react";
 
-import { offerApiV1PipecatRtcOfferPost, validateUserConfigurationsApiV1UserConfigurationsUserValidateGet, validateWorkflowApiV1WorkflowWorkflowIdValidatePost } from "@/client/sdk.gen";
+import { client } from "@/client/client.gen";
+import { validateUserConfigurationsApiV1UserConfigurationsUserValidateGet, validateWorkflowApiV1WorkflowWorkflowIdValidatePost } from "@/client/sdk.gen";
 import { WorkflowValidationError } from "@/components/flow/types";
 import logger from '@/lib/logger';
 
 import { sdpFilterCodec } from "../utils";
 import { useDeviceInputs } from "./useDeviceInputs";
 
-interface UseWebRTCProps {
+interface UseWebSocketRTCProps {
     workflowId: number;
     workflowRunId: number;
     accessToken: string | null;
     initialContextVariables?: Record<string, string> | null;
 }
 
-export const useWebRTC = ({ workflowId, workflowRunId, accessToken, initialContextVariables }: UseWebRTCProps) => {
+export const useWebSocketRTC = ({ workflowId, workflowRunId, accessToken, initialContextVariables }: UseWebSocketRTCProps) => {
     const [connectionStatus, setConnectionStatus] = useState<'idle' | 'connecting' | 'connected' | 'failed'>('idle');
     const [connectionActive, setConnectionActive] = useState(false);
     const [isCompleted, setIsCompleted] = useState(false);
@@ -23,7 +24,6 @@ export const useWebRTC = ({ workflowId, workflowRunId, accessToken, initialConte
     const [workflowConfigModalOpen, setWorkflowConfigModalOpen] = useState(false);
     const [workflowConfigError, setWorkflowConfigError] = useState<string | null>(null);
     const [isStarting, setIsStarting] = useState(false);
-    // Use initial context variables directly, no UI for editing
     const initialContext = initialContextVariables || {};
 
     const {
@@ -40,6 +40,7 @@ export const useWebRTC = ({ workflowId, workflowRunId, accessToken, initialConte
 
     const audioRef = useRef<HTMLAudioElement>(null);
     const pcRef = useRef<RTCPeerConnection | null>(null);
+    const wsRef = useRef<WebSocket | null>(null);
     const timeStartRef = useRef<number | null>(null);
 
     // Generate a cryptographically secure unique ID
@@ -53,7 +54,16 @@ export const useWebRTC = ({ workflowId, workflowRunId, accessToken, initialConte
             .join('');
     };
 
-    const pc_id = generateSecureId();
+    const pc_id = useRef(generateSecureId());
+
+    // Get WebSocket URL from client configuration
+    const getWebSocketUrl = useCallback(() => {
+        // Get base URL from client configuration
+        const baseUrl = client.getConfig().baseUrl || 'http://127.0.0.1:8000';
+        // Convert HTTP to WS protocol
+        const wsUrl = baseUrl.replace(/^http/, 'ws');
+        return `${wsUrl}/api/v1/ws/signaling/${workflowId}/${workflowRunId}?token=${accessToken}`;
+    }, [workflowId, workflowRunId, accessToken]);
 
     const createPeerConnection = () => {
         const config: RTCConfiguration = {
@@ -62,8 +72,28 @@ export const useWebRTC = ({ workflowId, workflowRunId, accessToken, initialConte
 
         const pc = new RTCPeerConnection(config);
 
-        pc.addEventListener('icegatheringstatechange', () => {
-            logger.info(`ICE gathering state changed in createPeerConnection, ${pc.iceGatheringState}`);
+        // Set up ICE candidate trickling
+        pc.addEventListener('icecandidate', (event) => {
+            if (wsRef.current?.readyState === WebSocket.OPEN) {
+                const message = {
+                    type: 'ice-candidate',
+                    payload: {
+                        candidate: event.candidate ? {
+                            candidate: event.candidate.candidate,
+                            sdpMid: event.candidate.sdpMid,
+                            sdpMLineIndex: event.candidate.sdpMLineIndex
+                        } : null,
+                        pc_id: pc_id.current
+                    }
+                };
+                wsRef.current.send(JSON.stringify(message));
+
+                if (event.candidate) {
+                    logger.debug(`Sending ICE candidate: ${event.candidate.candidate}`);
+                } else {
+                    logger.debug('Sending end-of-candidates signal');
+                }
+            }
         });
 
         pc.addEventListener('iceconnectionstatechange', () => {
@@ -85,28 +115,99 @@ export const useWebRTC = ({ workflowId, workflowRunId, accessToken, initialConte
         return pc;
     };
 
+    const connectWebSocket = useCallback(() => {
+        return new Promise<void>((resolve, reject) => {
+            const wsUrl = getWebSocketUrl();
+            logger.info(`Connecting to WebSocket: ${wsUrl}`);
+
+            const ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                logger.info('WebSocket connected');
+                wsRef.current = ws;
+                resolve();
+            };
+
+            ws.onerror = (error) => {
+                logger.error('WebSocket error:', error);
+                reject(error);
+            };
+
+            ws.onclose = () => {
+                logger.info('WebSocket closed');
+                wsRef.current = null;
+                if (connectionActive) {
+                    setConnectionStatus('failed');
+                }
+            };
+
+            ws.onmessage = async (event) => {
+                try {
+                    const message = JSON.parse(event.data);
+
+                    switch (message.type) {
+                        case 'answer':
+                            // Set remote description immediately (may have no candidates)
+                            const answer = message.payload;
+                            logger.debug('Received answer from server');
+
+                            if (pcRef.current) {
+                                await pcRef.current.setRemoteDescription({
+                                    type: 'answer',
+                                    sdp: answer.sdp
+                                });
+                                setConnectionActive(true);
+                                logger.info('Remote description set');
+                            }
+                            break;
+
+                        case 'ice-candidate':
+                            // Add ICE candidate from server
+                            const candidate = message.payload.candidate;
+
+                            if (candidate && pcRef.current) {
+                                try {
+                                    await pcRef.current.addIceCandidate({
+                                        candidate: candidate.candidate,
+                                        sdpMid: candidate.sdpMid,
+                                        sdpMLineIndex: candidate.sdpMLineIndex
+                                    });
+                                    logger.debug(`Added remote ICE candidate: ${candidate.candidate}`);
+                                } catch (e) {
+                                    logger.error('Failed to add ICE candidate:', e);
+                                }
+                            } else if (!candidate) {
+                                logger.debug('Received end-of-candidates signal from server');
+                            }
+                            break;
+
+                        case 'error':
+                            logger.error('Server error:', message.payload);
+                            break;
+
+                        default:
+                            logger.warn('Unknown message type:', message.type);
+                    }
+                } catch (e) {
+                    logger.error('Failed to handle WebSocket message:', e);
+                }
+            };
+        });
+    }, [getWebSocketUrl, connectionActive]);
+
     const negotiate = async () => {
         const pc = pcRef.current;
-        if (!pc) return;
+        const ws = wsRef.current;
+
+        if (!pc || !ws || ws.readyState !== WebSocket.OPEN) {
+            logger.error('Cannot negotiate: PC or WebSocket not ready');
+            return;
+        }
 
         try {
+            // Create offer
             const offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
-
-            await new Promise<void>((resolve) => {
-                if (pc.iceGatheringState === 'complete') {
-                    resolve();
-                } else {
-                    const checkState = () => {
-                        if (pc.iceGatheringState === 'complete') {
-                            logger.debug(`ICE gathering is complete in negotiate, ${pc.iceGatheringState}`);
-                            pc.removeEventListener('icegatheringstatechange', checkState);
-                            resolve();
-                        }
-                    };
-                    pc.addEventListener('icegatheringstatechange', checkState);
-                }
-            });
 
             const localDescription = pc.localDescription;
             if (!localDescription) return;
@@ -117,36 +218,25 @@ export const useWebRTC = ({ workflowId, workflowRunId, accessToken, initialConte
                 sdp = sdpFilterCodec('audio', audioCodec, sdp);
             }
 
-            if (!accessToken) return;
-
-            const response = await offerApiV1PipecatRtcOfferPost({
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`,
-                },
-                body: {
+            // Send offer immediately via WebSocket (without waiting for ICE gathering)
+            const message = {
+                type: 'offer',
+                payload: {
                     sdp: sdp,
                     type: 'offer',
-                    pc_id: pc_id,
-                    restart_pc: false,
+                    pc_id: pc_id.current,
                     workflow_id: workflowId,
                     workflow_run_id: workflowRunId,
                     call_context_vars: initialContext
                 }
-            });
+            };
 
-            if (response && response.data) {
-                const answerSdpText = typeof response.data === 'object' && 'sdp' in response.data
-                    ? response.data.sdp as string
-                    : '';
+            ws.send(JSON.stringify(message));
+            logger.info('Sent offer via WebSocket (ICE trickling enabled)');
 
-                await pc.setRemoteDescription({
-                    type: 'answer',
-                    sdp: answerSdpText
-                });
-                setConnectionActive(true);
-            }
         } catch (e) {
             logger.error(`Negotiation failed: ${e}`);
+            setConnectionStatus('failed');
         }
     };
 
@@ -154,7 +244,9 @@ export const useWebRTC = ({ workflowId, workflowRunId, accessToken, initialConte
         if (isStarting || !accessToken) return;
         setIsStarting(true);
         setConnectionStatus('connecting');
+
         try {
+            // Validate API keys
             const response = await validateUserConfigurationsApiV1UserConfigurationsUserValidateGet({
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
@@ -163,6 +255,7 @@ export const useWebRTC = ({ workflowId, workflowRunId, accessToken, initialConte
                     validity_ttl_seconds: 86400
                 },
             });
+
             if (response.error) {
                 setApiKeyModalOpen(true);
                 let msg = 'API Key Error';
@@ -173,10 +266,11 @@ export const useWebRTC = ({ workflowId, workflowRunId, accessToken, initialConte
                         .join('\n');
                 }
                 setApiKeyError(msg);
+                setConnectionStatus('failed');
                 return;
             }
 
-            // Then check workflow validation
+            // Validate workflow
             const workflowResponse = await validateWorkflowApiV1WorkflowWorkflowIdValidatePost({
                 path: {
                     workflow_id: workflowId,
@@ -196,12 +290,18 @@ export const useWebRTC = ({ workflowId, workflowRunId, accessToken, initialConte
                         .join('\n');
                 }
                 setWorkflowConfigError(msg);
+                setConnectionStatus('failed');
                 return;
             }
 
+            // Connect WebSocket first
+            await connectWebSocket();
+
+            // Create peer connection
             timeStartRef.current = null;
             const pc = createPeerConnection();
 
+            // Set up media constraints
             const constraints: MediaStreamConstraints = {
                 audio: false,
             };
@@ -214,6 +314,7 @@ export const useWebRTC = ({ workflowId, workflowRunId, accessToken, initialConte
                 constraints.audio = Object.keys(audioConstraints).length ? audioConstraints : true;
             }
 
+            // Get user media and negotiate
             if (constraints.audio) {
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -229,6 +330,9 @@ export const useWebRTC = ({ workflowId, workflowRunId, accessToken, initialConte
             } else {
                 await negotiate();
             }
+        } catch (error) {
+            logger.error('Failed to start connection:', error);
+            setConnectionStatus('failed');
         } finally {
             setIsStarting(false);
         }
@@ -239,6 +343,13 @@ export const useWebRTC = ({ workflowId, workflowRunId, accessToken, initialConte
         setIsCompleted(true);
         setConnectionStatus('idle');
 
+        // Close WebSocket
+        if (wsRef.current) {
+            wsRef.current.close();
+            wsRef.current = null;
+        }
+
+        // Close peer connection
         const pc = pcRef.current;
         if (!pc) return;
 
@@ -263,6 +374,18 @@ export const useWebRTC = ({ workflowId, workflowRunId, accessToken, initialConte
             }
         }, 500);
     };
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            if (wsRef.current) {
+                wsRef.current.close();
+            }
+            if (pcRef.current) {
+                pcRef.current.close();
+            }
+        };
+    }, []);
 
     return {
         audioRef,
