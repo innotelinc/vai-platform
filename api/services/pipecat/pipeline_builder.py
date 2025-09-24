@@ -105,6 +105,7 @@ def create_pipeline_task(pipeline, workflow_run_id, audio_config: AudioConfig = 
         enable_usage_metrics=True,
         send_initial_empty_metrics=False,
         enable_heartbeats=True,
+        start_metadata={"workflow_run_id": workflow_run_id},
     )
 
     # If audio_config is provided, set the audio sample rates
