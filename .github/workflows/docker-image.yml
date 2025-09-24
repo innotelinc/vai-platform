@@ -1,0 +1,70 @@
+name: Build and Push Docker Images
+
+on:
+  push:
+    branches:
+      - main
+
+# Ensure only one workflow run per branch at a time; cancel any in-progress runs on new push
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      COMMIT_SHA: ${{ github.sha }}  # Used to tag images with short commit SHA
+
+    strategy:
+      matrix:
+        service: 
+          - "dograh-api|api/Dockerfile|./api"
+          - "dograh-ui|ui/Dockerfile|./ui"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU  # Enables cross-platform builds (e.g., arm64)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx  # Enables multi-arch and advanced Docker builds
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_USERNAME }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Build and Push ${{ matrix.service }}
+        run: |
+          # Parse matrix entry into individual variables
+          SERVICE="${{ matrix.service }}"
+          IMAGE_NAME=$(echo "$SERVICE" | cut -d '|' -f1)
+          DOCKERFILE=$(echo "$SERVICE" | cut -d '|' -f2)
+          CONTEXT=$(echo "$SERVICE" | cut -d '|' -f3)
+          SHORT_SHA=${COMMIT_SHA::8}
+
+          echo "Building and pushing image: $IMAGE_NAME"
+          echo "Dockerfile: $DOCKERFILE"
+          echo "Context: $CONTEXT"
+          echo "Commit SHA: $SHORT_SHA"
+
+          # Build and push multi-arch Docker image to DockerHub and GHCR
+          docker buildx build \
+            -f "$DOCKERFILE" \
+            --platform linux/amd64,linux/arm64 \
+            --tag ${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME:$SHORT_SHA \
+            --tag ${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME:latest \
+            --tag ghcr.io/${{ secrets.GHCR_USERNAME }}/$IMAGE_NAME:$SHORT_SHA \
+            --tag ghcr.io/${{ secrets.GHCR_USERNAME }}/$IMAGE_NAME:latest \
+            --push "$CONTEXT"

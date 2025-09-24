@@ -59,7 +59,7 @@ services:
       - app-network
 
   api:
-    image: dograhai/dograh-api:latest
+    image: ${REGISTRY:-dograhai}/dograh-api:latest 
     volumes:
       - shared-tmp:/tmp
     environment:
@@ -122,7 +122,7 @@ services:
       - app-network
 
   arq-worker:
-    image: dograhai/dograh-api:latest
+    image: ${REGISTRY:-dograhai}/dograh-api:latest
     volumes:
       - shared-tmp:/tmp
     environment:
@@ -165,7 +165,7 @@ services:
       - app-network
 
   ui:
-    image: dograhai/dograh-ui:latest
+    image: ${REGISTRY:-dograhai}/dograh-ui:latest
     environment:
       NEXT_PUBLIC_NODE_ENV: "local"
       NEXT_PUBLIC_AUTH_PROVIDER: "local"
@@ -184,7 +184,7 @@ services:
       # Sentry
       NEXT_PUBLIC_ENABLE_SENTRY: "false"
     ports:
-      - "3000:3000"
+      - "3010:3000"
     depends_on:
       api:
         condition: service_healthy

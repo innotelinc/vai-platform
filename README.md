@@ -23,24 +23,31 @@ Build voice agents in just one line or drag-and-drop, then test them using AI pe
 Maintained by YC alumni and exit founders, we're making sure the future of voice AI stays open, not monopolized.
 
 ## 🎥 Demo Video
-[![Watch a quick demo video](https://img.youtube.com/vi/LK8mvK5TH2Q/1.jpg)](https://www.youtube.com/watch?v=LK8mvK5TH2Q)
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=LK8mvK5TH2Q">
+    <img src="https://img.youtube.com/vi/LK8mvK5TH2Q/maxresdefault.jpg" alt="Watch Dograh AI Demo Video" width="80%" style="border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+  </a>
+  <br>
+  <em>Click to watch a 2-minute demo of Dograh AI in action</em>
+</div>
 
 ## 🚀 Get Started
 
 The only command you need to run:
 
+##### Download and start Dograh
 ```bash
-# Download and start Dograh
-curl -o docker-compose.yaml https://raw.githubusercontent.com/dograh-hq/dograh/main/docker-compose.yaml && docker compose up
+curl -o docker-compose.yaml https://raw.githubusercontent.com/dograh-hq/dograh/main/docker-compose.yaml && REGISTRY=ghcr.io/dograh-hq docker compose up
 ```
 
 > **Note**  
-> First startup may take 2-3 minutes to download all images. Once running, open http://localhost:3000 to create your first AI voice assistant!  
+> First startup may take 2-3 minutes to download all images. Once running, open http://localhost:3010 to create your first AI voice assistant!  
 > For prerequisites, port issues, or troubleshooting, see the [Prerequisites and Troubleshooting](#-prerequisites-and-troubleshooting) section below.
  
 ### 🎙️ Your First Voice Bot
 
-1. **Open Dashboard**: Launch [http://localhost:3000](http://localhost:3000) on your browser
+1. **Open Dashboard**: Launch [http://localhost:3010](http://localhost:3010) on your browser
 2. **Choose Call Type**: Select **Inbound** or **Outbound** calling.
 3. **Name Your Bot**: Use a short two-word name (e.g., *Lead Qualification*).
 4. **Describe Use Case**: In 5–10 words (e.g., *Screen insurance form submissions for purchase intent*).
@@ -91,7 +98,7 @@ To run Dograh AI locally, make sure you have the following installed:
 ### Required Ports
 
 Ensure these ports are available:
-- `3000` - Web UI
+- `3010` - Web UI
 - `8000` - API Server
 - `5432` - PostgreSQL
 - `6379` - Redis
@@ -100,20 +107,19 @@ Ensure these ports are available:
 
 ### Checking Port Availability
 
+##### Check if a port is in use (replace 3010 with the port number)
 ```bash
-# Check if a port is in use (replace 3000 with the port number)
-lsof -i :3000
+lsof -i :3010
 ```
 
 ### Freeing Up Ports
 
 #### When a port is already in use:
+##### Check what's using the port first and then kill the process (may require sudo on Linux)
 ```bash
-# Check what's using the port first
-lsof -i :3000
+lsof -i :3010
 
-# Then kill the process (may require sudo on Linux)
-kill -9 $(lsof -t -i :3000)
+kill -9 $(lsof -t -i :3010)
 ```
 
 #### When Docker containers are using the ports (with auto-restart enabled):
@@ -141,13 +147,27 @@ Check restart policies (should show 'no' for each container):
 docker inspect -f '{{.Name}} - {{.HostConfig.RestartPolicy.Name}}' $(docker ps -a -q)
 ```
 
-### Stopping Dograh Services
+### Docker Registry Options
 
+Dograh images are available from two registries that you can choose from:
+
+- **GitHub Container Registry (Default)**: `ghcr.io/dograh-hq` - Recommended for most users
+- **Docker Hub**: `dograhai` - Alternative registry
+
+To use a specific registry, set the `REGISTRY` environment variable using either of the following:
+
+##### Using GitHub Container Registry (recommended) or Docker Hub
 ```bash
-# Stop services
+REGISTRY=ghcr.io/dograh-hq docker compose up
+
+REGISTRY=dograhai docker compose up
+```
+
+### Stopping Dograh Services
+##### Stop services or Stop and remove all data (full cleanup)
+```bash
 docker compose down
 
-# Stop and remove all data (full cleanup)
 docker compose down -v
 ```
 
