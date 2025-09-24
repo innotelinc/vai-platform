@@ -3,7 +3,6 @@ import { useRef, useState } from "react";
 import { offerApiV1PipecatRtcOfferPost, validateUserConfigurationsApiV1UserConfigurationsUserValidateGet, validateWorkflowApiV1WorkflowWorkflowIdValidatePost } from "@/client/sdk.gen";
 import { WorkflowValidationError } from "@/components/flow/types";
 import logger from '@/lib/logger';
-import { getRandomId } from "@/lib/utils";
 
 import { sdpFilterCodec } from "../utils";
 import { useDeviceInputs } from "./useDeviceInputs";
@@ -42,7 +41,19 @@ export const useWebRTC = ({ workflowId, workflowRunId, accessToken, initialConte
     const audioRef = useRef<HTMLAudioElement>(null);
     const pcRef = useRef<RTCPeerConnection | null>(null);
     const timeStartRef = useRef<number | null>(null);
-    const pc_id = 'PC-' + getRandomId().toString();
+
+    // Generate a cryptographically secure unique ID
+    const generateSecureId = () => {
+        // Use Web Crypto API to generate random bytes
+        const array = new Uint8Array(16);
+        crypto.getRandomValues(array);
+        // Convert to hex string
+        return 'PC-' + Array.from(array)
+            .map(b => b.toString(16).padStart(2, '0'))
+            .join('');
+    };
+
+    const pc_id = generateSecureId();
 
     const createPeerConnection = () => {
         const config: RTCConfiguration = {

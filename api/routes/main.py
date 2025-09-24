@@ -12,6 +12,7 @@ from api.routes.service_keys import router as service_keys_router
 from api.routes.superuser import router as superuser_router
 from api.routes.twilio import router as twilio_router
 from api.routes.user import router as user_router
+from api.routes.webrtc_signaling import router as webrtc_signaling_router
 from api.routes.workflow import router as workflow_router
 
 router = APIRouter(
@@ -31,6 +32,7 @@ router.include_router(service_keys_router)
 router.include_router(looptalk_router)
 router.include_router(organization_usage_router)
 router.include_router(reports_router)
+router.include_router(webrtc_signaling_router)
 
 
 @router.get("/health")
