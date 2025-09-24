@@ -214,7 +214,7 @@ Founded by YC alumni and exit founders committed to keeping voice AI open and ac
 
   <p align="center">
     <a href="https://github.com/dograh-hq/dograh/stargazers">⭐ Star us on GitHub</a> |
-    <a href="https://www.dograh.com">☁️ Try Cloud Version</a> |
+    <a href="https://app.dograh.com">☁️ Try Cloud Version</a> |
     <a href="https://join.slack.com/t/dograh-community/shared_invite/zt-3czr47sw5-MSg1J0kJ7IMPOCHF~03auQ">💬 Join Slack</a>
   </p>
 
