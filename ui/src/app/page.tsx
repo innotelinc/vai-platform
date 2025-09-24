@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
 import { isNextRouterError } from "next/dist/client/components/is-next-router-error";
+import { redirect } from "next/navigation";
 
 import { getWorkflowsApiV1WorkflowFetchGet } from "@/client/sdk.gen";
 import SignInClient from "@/components/SignInClient";
@@ -48,7 +48,7 @@ export default async function Home() {
       if (isNextRouterError(error)) {
         throw error;
       }
-      
+
       logger.error('[HomePage] Error checking workflows for local provider:', error);
       // Default to create-workflow on actual errors
       logger.debug('[HomePage] Defaulting to /create-workflow due to error');
