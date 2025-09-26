@@ -6,7 +6,7 @@ set -e  # Exit on error
 ### CONFIGURATION #############################################################
 ENV_FILE="api/.env"
 RUN_DIR="run"                 # where we keep *.pid
-LOG_ROOT="logs"
+LOG_DIR="logs"
 VENV_PATH="/home/ubuntu/dograh_venv"
 ARQ_WORKERS=${ARQ_WORKERS:-1}
 
@@ -75,7 +75,6 @@ rm -f "$RUN_DIR/uvicorn.port" "$RUN_DIR/uvicorn_new.port" "$RUN_DIR/uvicorn_old.
 alembic -c api/alembic.ini upgrade head
 
 ### 5) Prepare logs ###########################################################
-LOG_DIR="$LOG_ROOT/latest"
 mkdir -p "$LOG_DIR"
 
 ### 7) Start services #########################################################

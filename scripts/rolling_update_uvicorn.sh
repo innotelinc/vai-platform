@@ -6,13 +6,15 @@ set -e  # Exit on error
 ### CONFIGURATION #############################################################
 ENV_FILE="api/.env"
 RUN_DIR="run"
-LOG_ROOT="logs"
+LOG_DIR="logs"
 VENV_PATH="/home/ubuntu/dograh_venv"
 HEALTH_CHECK_ENDPOINT="/api/v1/health"  # Adjust as needed
 MAX_WAIT_SECONDS=310  # Max wait for graceful shutdown (5 minutes + 10 seconds grace)
 
 # Load environment
 set -a && . "$ENV_FILE" && set +a
+
+cd /home/ubuntu/app
 
 ### FUNCTIONS ##################################################################
 
@@ -142,11 +144,11 @@ start_new_uvicorn_workers() {
     # Activate virtual environment
     source ${VENV_PATH}/bin/activate
     
-    # Use the latest log directory (where start_services.sh put logs)
-    local log_dir="$LOG_ROOT/latest"
+    # Use the log directory (where start_services.sh put logs)
+    local log_dir="$LOG_DIR"
     
     if [[ ! -d "$log_dir" ]]; then
-        log_error "No latest log directory found. Run start_services.sh first."
+        log_error "No log directory found. Run start_services.sh first."
         return 1
     fi
     
@@ -304,5 +306,5 @@ echo "✓ Rolling update completed successfully"
 echo "  Old port: ${OLD_PORT:-none}"
 echo "  New port: $NEW_PORT"
 echo "  New PID: $NEW_PID"
-echo "  Logs: $LOG_ROOT/latest/"
+echo "  Logs: $LOG_DIR/"
 echo "──────────────────────────────────────────────────"
