@@ -1,0 +1,20 @@
+[Unit]
+Description=Dograh Services
+After=network.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=forking
+User=a
+Group=a
+WorkingDirectory=/home/a/dograh
+Environment="PATH=/opt/conda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+ExecStart=/home/a/dograh/scripts/start_services.sh
+ExecStop=/home/a/dograh/scripts/stop_services.sh
+TimeoutStopSec=30
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
