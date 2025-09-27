@@ -6,7 +6,8 @@ set -e  # Exit on error
 ### CONFIGURATION #############################################################
 ENV_FILE="api/.env"
 RUN_DIR="run"
-LOG_DIR="logs"
+BASE_LOG_DIR="/home/ubuntu/dograh/logs"  # Base logs directory (same as start_services.sh)
+LATEST_LINK="$BASE_LOG_DIR/latest"        # Symlink to latest logs (same as start_services.sh)
 VENV_PATH="/home/ubuntu/dograh/venv"
 HEALTH_CHECK_ENDPOINT="/api/v1/health"  # Adjust as needed
 MAX_WAIT_SECONDS=310  # Max wait for graceful shutdown (5 minutes + 10 seconds grace)
@@ -143,15 +144,21 @@ start_new_uvicorn_workers() {
     
     # Activate virtual environment
     source ${VENV_PATH}/bin/activate
-    
-    # Use the log directory (where start_services.sh put logs)
-    local log_dir="$LOG_DIR"
-    
-    if [[ ! -d "$log_dir" ]]; then
-        log_error "No log directory found. Run start_services.sh first."
+
+    # Use the latest log directory created by start_services.sh
+    local log_dir=""
+
+    # First, check if the symlink exists and points to a valid directory
+    if [[ -L "$LATEST_LINK" ]] && [[ -d "$LATEST_LINK" ]]; then
+        # Follow the symlink to get the actual directory
+        log_dir="$BASE_LOG_DIR/$(readlink "$LATEST_LINK")"
+        log_info "Using existing log directory: $log_dir"
+    else
+        log_error "No log directory found. Run start_services.sh first to create logs directory."
+        log_error "Expected symlink at: $LATEST_LINK"
         return 1
     fi
-    
+
     # Create unique log filename using timestamp and script PID to avoid conflicts
     local script_pid=$$  # PID of this rolling_update script (for uniqueness)
     local timestamp=$(date '+%H%M%S')
@@ -306,5 +313,5 @@ echo "✓ Rolling update completed successfully"
 echo "  Old port: ${OLD_PORT:-none}"
 echo "  New port: $NEW_PORT"
 echo "  New PID: $NEW_PID"
-echo "  Logs: $LOG_DIR/"
+echo "  Logs: $BASE_LOG_DIR/$LATEST_LINK/"
 echo "──────────────────────────────────────────────────"

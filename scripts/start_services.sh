@@ -6,7 +6,10 @@ set -e  # Exit on error
 ### CONFIGURATION #############################################################
 ENV_FILE="api/.env"
 RUN_DIR="run"                 # where we keep *.pid
-LOG_DIR="logs"
+BASE_LOG_DIR="/home/ubuntu/dograh/logs"           # base logs directory
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+LOG_DIR="$BASE_LOG_DIR/$TIMESTAMP"  # timestamped log directory
+LATEST_LINK="$BASE_LOG_DIR/latest"  # symlink to latest logs
 VENV_PATH="/home/ubuntu/dograh/venv"
 ARQ_WORKERS=${ARQ_WORKERS:-1}
 
@@ -75,7 +78,17 @@ rm -f "$RUN_DIR/uvicorn.port" "$RUN_DIR/uvicorn_new.port" "$RUN_DIR/uvicorn_old.
 alembic -c api/alembic.ini upgrade head
 
 ### 5) Prepare logs ###########################################################
+mkdir -p "$BASE_LOG_DIR"
 mkdir -p "$LOG_DIR"
+
+# Remove old symlink if it exists and create new one
+if [[ -L "$LATEST_LINK" ]]; then
+  rm "$LATEST_LINK"
+fi
+ln -s "$TIMESTAMP" "$LATEST_LINK"
+
+echo "Log directory: $LOG_DIR"
+echo "Latest symlink: $LATEST_LINK -> $TIMESTAMP"
 
 ### 7) Start services #########################################################
 for name in "${!SERVICES[@]}"; do
