@@ -7,14 +7,14 @@ set -e  # Exit on error
 ENV_FILE="api/.env"
 RUN_DIR="run"
 LOG_DIR="logs"
-VENV_PATH="/home/ubuntu/dograh_venv"
+VENV_PATH="/home/ubuntu/dograh/venv"
 HEALTH_CHECK_ENDPOINT="/api/v1/health"  # Adjust as needed
 MAX_WAIT_SECONDS=310  # Max wait for graceful shutdown (5 minutes + 10 seconds grace)
 
 # Load environment
 set -a && . "$ENV_FILE" && set +a
 
-cd /home/ubuntu/app
+cd /home/ubuntu/dograh/app
 
 ### FUNCTIONS ##################################################################
 

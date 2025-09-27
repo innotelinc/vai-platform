@@ -7,7 +7,7 @@ set -e  # Exit on error
 ENV_FILE="api/.env"
 RUN_DIR="run"                 # where we keep *.pid
 LOG_DIR="logs"
-VENV_PATH="/home/ubuntu/dograh_venv"
+VENV_PATH="/home/ubuntu/dograh/venv"
 ARQ_WORKERS=${ARQ_WORKERS:-1}
 
 # Log startup
@@ -16,7 +16,7 @@ echo "Starting Dograh Services at $(date)"
 ### 1) Load environment vars so that configurations like FASTAPI_WORKERS are loaded
 set -a && . "$ENV_FILE" && set +a
 
-cd /home/ubuntu/app
+cd /home/ubuntu/dograh/app
 
 if [[ -z "${FASTAPI_PORT:-}" ]]; then
   echo "Error: FASTAPI_PORT environment variable is not set."
