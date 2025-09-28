@@ -87,10 +87,11 @@ def setup_logging():
 
         patched.add(
             actual_log_path,
-            format=log_format,
             level=log_level,
-            colorize=False,  # No colors in file logs
+            serialize=True,  # Use JSON serialization for structured logs
             enqueue=True,  # Thread-safe writing
+            backtrace=True,  # Include full traceback in exceptions
+            diagnose=False,  # Don't include local variables in traceback for security
         )
     else:
         # Console handler (existing behavior)
