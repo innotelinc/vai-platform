@@ -25,6 +25,26 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          submodules: true  # Only for version check, not used in build
+
+      - name: Check pipecat version sync
+        id: version-check
+        run: |
+          chmod +x scripts/check-pipecat-sync.sh
+          
+          # Capture the output for version details
+          if OUTPUT=$(./scripts/check-pipecat-sync.sh 2>&1); then
+            echo "version_mismatch=false" >> $GITHUB_OUTPUT
+          else
+            echo "version_mismatch=true" >> $GITHUB_OUTPUT
+            # Extract version info from the output
+            SUBMODULE_VERSION=$(echo "$OUTPUT" | grep "Submodule commit:" | awk '{print $3}')
+            DOCKERFILE_VERSION=$(echo "$OUTPUT" | grep "Dockerfile commit:" | awk '{print $3}')
+            echo "submodule_version=${SUBMODULE_VERSION}" >> $GITHUB_OUTPUT
+            echo "dockerfile_version=${DOCKERFILE_VERSION}" >> $GITHUB_OUTPUT
+            # Don't fail the build, just note the mismatch
+          fi
 
       - name: Set up QEMU  # Enables cross-platform builds (e.g., arm64)
         uses: docker/setup-qemu-action@v3
@@ -46,6 +66,7 @@ jobs:
           password: ${{ secrets.GHCR_TOKEN }}
 
       - name: Build and Push ${{ matrix.service }}
+        id: docker-build
         run: |
           # Parse matrix entry into individual variables
           SERVICE="${{ matrix.service }}"
@@ -58,6 +79,12 @@ jobs:
           echo "Dockerfile: $DOCKERFILE"
           echo "Context: $CONTEXT"
           echo "Commit SHA: $SHORT_SHA"
+          
+          # Export tags for Slack notification
+          echo "image_name=${IMAGE_NAME}" >> $GITHUB_OUTPUT
+          echo "dockerhub_tag=${{ secrets.DOCKERHUB_USERNAME }}/${IMAGE_NAME}:${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "ghcr_tag=ghcr.io/${{ secrets.GHCR_USERNAME }}/${IMAGE_NAME}:${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
 
           # Build and push multi-arch Docker image to DockerHub and GHCR
           docker buildx build \
@@ -68,3 +95,82 @@ jobs:
             --tag ghcr.io/${{ secrets.GHCR_USERNAME }}/$IMAGE_NAME:$SHORT_SHA \
             --tag ghcr.io/${{ secrets.GHCR_USERNAME }}/$IMAGE_NAME:latest \
             --push "$CONTEXT"
+      
+      # Success notification
+      - name: Send Slack notification - Success
+        if: success()
+        uses: slackapi/slack-github-action@v1.26.0
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        with:
+          payload: |
+            {
+              "text": "✅ Docker Build Successful",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "✅ Docker Build & Push Successful"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Service:* `${{ steps.docker-build.outputs.image_name }}`\n*Commit:* `${{ steps.docker-build.outputs.short_sha }}`\n*Branch:* `${{ github.ref_name }}`\n*Author:* ${{ github.actor }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*📦 Published Tags:*\n• DockerHub: `${{ steps.docker-build.outputs.dockerhub_tag }}`\n• DockerHub: `${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.docker-build.outputs.image_name }}:latest`\n• GHCR: `${{ steps.docker-build.outputs.ghcr_tag }}`\n• GHCR: `ghcr.io/${{ secrets.GHCR_USERNAME }}/${{ steps.docker-build.outputs.image_name }}:latest`"
+                  }
+                },
+                {
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "${{ steps.version-check.outputs.version_mismatch == 'true' && format('⚠️ Warning: Pipecat version mismatch detected - <@{0}> <@{1}> please sync versions', secrets.SLACK_DEV1_ID, secrets.SLACK_DEV2_ID) || '✅ Pipecat versions in sync' }}"
+                    }
+                  ]
+                }
+              ]
+            }
+      
+      # Failure notification
+      - name: Send Slack notification - Failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1.26.0
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        with:
+          payload: |
+            {
+              "text": "❌ Docker Build Failed",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "❌ Docker Build Failed"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Service:* `${{ steps.docker-build.outputs.image_name || matrix.service }}`\n*Branch:* `${{ github.ref_name }}`\n*Author:* ${{ github.actor }}\n*Workflow:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "${{ steps.version-check.outputs.version_mismatch == 'true' && format('*🔴 Pipecat Version Mismatch:*\n• Submodule: `{0}`\n• Dockerfile: `{1}`\n\n_This may have caused the build failure._\n\n<@{2}> <@{3}> Please update api/Dockerfile to use commit {0}', steps.version-check.outputs.submodule_version, steps.version-check.outputs.dockerfile_version, secrets.SLACK_DEV1_ID, secrets.SLACK_DEV2_ID) || '*Failure Reason:* Check workflow logs for details' }}"
+                  }
+                }
+              ]
+            }
