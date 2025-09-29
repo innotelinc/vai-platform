@@ -1,5 +1,4 @@
-import os
-import sys
+import os, sys
 
 import loguru
 from pipecat.utils.context import run_id_var, turn_var
