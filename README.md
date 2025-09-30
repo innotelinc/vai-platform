@@ -18,9 +18,10 @@
   </a>
 </p>
 
-The fastest way to build voice bots - get started with any voice AI use case in under 2 minutes (our hard SLA standards).
-Build voice agents in just one line or drag-and-drop, then test them using AI personas that mimic real customer calls. It's 100% open source, self-hosted if you want, and never hides a line of code- ever. The project has a strong commitment to **100% open source** and every line of code is released in the open.
-Maintained by YC alumni and exit founders, we're making sure the future of voice AI stays open, not monopolized.
+Dograh helps you build your own voice agents with an easy drag-and-drop workflow builder. It's the fastest way to build voice AI agents - from zero to working bot in under 2 minutes (our hard SLA standards).
+
+- **100% open source**, self-hostable platform with built-in AI testing personas and flexible LLM/TTS/STT integration
+- **Maintained by YC alumni and exit founders**, ensuring the future of voice AI stays open, not monopolized
 
 ## 🎥 Demo Video
 
@@ -34,16 +35,19 @@ Maintained by YC alumni and exit founders, we're making sure the future of voice
 
 ## 🚀 Get Started
 
+### Prerequisites
+Before you begin, make sure you have the requirements installed. See 📋 **[Prerequisites](dograh/docs/prerequisites.md)** for system requirements and port availability.
+
 The only command you need to run:
 
-##### Download and start Dograh
+##### Download and setup Dograh on your local machine
 ```bash
 curl -o docker-compose.yaml https://raw.githubusercontent.com/dograh-hq/dograh/main/docker-compose.yaml && REGISTRY=ghcr.io/dograh-hq docker compose up
 ```
 
 > **Note**  
 > First startup may take 2-3 minutes to download all images. Once running, open http://localhost:3010 to create your first AI voice assistant!  
-> For prerequisites, port issues, or troubleshooting, see the [Prerequisites and Troubleshooting](#-prerequisites-and-troubleshooting) section below.
+> For common issues and solutions, see 🔧 **[Troubleshooting](dograh/docs/troubleshooting.md)**.
  
 ### 🎙️ Your First Voice Bot
 
@@ -83,93 +87,6 @@ curl -o docker-compose.yaml https://raw.githubusercontent.com/dograh-hq/dograh/m
 - Workflow Testing: Test specific workflow IDs with automated calls
 - Real-world Simulation: AI personas that mimic actual customer behavior
 
-## 🔧 Prerequisites and Troubleshooting
-
-### Prerequisites
-
-To run Dograh AI locally, make sure you have the following installed:
-
-- [Docker](https://docs.docker.com/get-docker/) (version 20.10 or later)
-- [curl](https://curl.se/download.html) – usually preinstalled on macOS/Linux
-
-> **Note**  
-> Docker Compose is included with Docker Desktop. Make sure Docker is running before you begin.
-
-### Required Ports
-
-Ensure these ports are available:
-- `3010` - Web UI
-- `8000` - API Server
-- `5432` - PostgreSQL
-- `6379` - Redis
-- `9000` - MinIO (S3-compatible storage)
-- `9001` - MinIO Console
-
-### Checking Port Availability
-
-##### Check if a port is in use (replace 3010 with the port number)
-```bash
-lsof -i :3010
-```
-
-### Freeing Up Ports
-
-#### When a port is already in use:
-##### Check what's using the port first and then kill the process (may require sudo on Linux)
-```bash
-lsof -i :3010
-
-kill -9 $(lsof -t -i :3010)
-```
-
-#### When Docker containers are using the ports (with auto-restart enabled):
-
-**Step 1:** Stop all running containers
-```bash
-docker stop $(docker ps -q)
-```
-
-**Step 2:** Disable restart policy for all containers
-This prevents containers from automatically restarting:
-```bash
-docker update --restart=no $(docker ps -a -q)
-```
-
-**Step 3:** Verify
-
-Check that no containers are running:
-```bash
-docker ps
-```
-
-Check restart policies (should show 'no' for each container):
-```bash
-docker inspect -f '{{.Name}} - {{.HostConfig.RestartPolicy.Name}}' $(docker ps -a -q)
-```
-
-### Docker Registry Options
-
-Dograh images are available from two registries that you can choose from:
-
-- **GitHub Container Registry (Default)**: `ghcr.io/dograh-hq` - Recommended for most users
-- **Docker Hub**: `dograhai` - Alternative registry
-
-To use a specific registry, set the `REGISTRY` environment variable using either of the following:
-
-##### Using GitHub Container Registry (recommended) or Docker Hub
-```bash
-REGISTRY=ghcr.io/dograh-hq docker compose up
-
-REGISTRY=dograhai docker compose up
-```
-
-### Stopping Dograh Services
-##### Stop services or Stop and remove all data (full cleanup)
-```bash
-docker compose down
-
-docker compose down -v
-```
 
 ## Configuration
 Dograh automatically generates API keys on first run, but you can use your own keys. 
