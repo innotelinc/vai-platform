@@ -5,6 +5,5 @@ __pycache__
 # logs and run directory on production
 /logs/
 /run/
-docs/
 infrastructure/
 nginx/
