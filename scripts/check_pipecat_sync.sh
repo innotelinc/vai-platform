@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# check-pipecat-sync.sh
+# check_pipecat_sync.sh
 #
 # Verifies that the pipecat submodule commit SHA matches the one in Dockerfile.
 # Used by CI/CD to ensure versions are synchronized before merging.
