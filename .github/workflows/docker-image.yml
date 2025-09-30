@@ -31,10 +31,10 @@ jobs:
       - name: Check pipecat version sync
         id: version-check
         run: |
-          chmod +x scripts/check-pipecat-sync.sh
+          chmod +x scripts/check_pipecat_sync.sh
           
           # Capture the output for version details
-          if OUTPUT=$(./scripts/check-pipecat-sync.sh 2>&1); then
+          if OUTPUT=$(./scripts/check_pipecat_sync.sh 2>&1); then
             echo "version_mismatch=false" >> $GITHUB_OUTPUT
           else
             echo "version_mismatch=true" >> $GITHUB_OUTPUT
