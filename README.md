@@ -110,7 +110,7 @@ Visit [https://www.dograh.com](https://www.dograh.com/) for our managed cloud of
 ## 📚Documentation
 Full documentation is in progress. For now, this README will get you started.
 
-##  🤝Community & Support
+## 🤝Community & Support
 - GitHub Issues: Report bugs or request features
 - Slack: Our Slack community is not just for support — it’s the cornerstone of Dograh AI contributions. Here, you can:
   - Connect with maintainers and other contributors
