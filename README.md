@@ -36,7 +36,7 @@ Dograh helps you build your own voice agents with an easy drag-and-drop workflow
 ## 🚀 Get Started
 
 ### Prerequisites
-Before you begin, make sure you have the requirements installed. See 📋 **[Prerequisites](dograh/docs/prerequisites.md)** for system requirements and port availability.
+Before you begin, make sure you have the requirements installed. See 📋 **[Prerequisites](docs/prerequisites.md)** for system requirements and port availability.
 
 The only command you need to run:
 
@@ -47,7 +47,7 @@ curl -o docker-compose.yaml https://raw.githubusercontent.com/dograh-hq/dograh/m
 
 > **Note**  
 > First startup may take 2-3 minutes to download all images. Once running, open http://localhost:3010 to create your first AI voice assistant!  
-> For common issues and solutions, see 🔧 **[Troubleshooting](dograh/docs/troubleshooting.md)**.
+> For common issues and solutions, see 🔧 **[Troubleshooting](docs/troubleshooting.md)**.
  
 ### 🎙️ Your First Voice Bot
 
