@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 
-export type TooltipKey = 'web_call'; // Add more tooltip keys as needed
+export type TooltipKey = 'web_call' | 'customize_workflow'; // Add more tooltip keys as needed
 
 interface OnboardingState {
     seenTooltips: TooltipKey[];

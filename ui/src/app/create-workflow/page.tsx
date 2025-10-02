@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-import { createWorkflowFromTemplateApiV1WorkflowCreateTemplatePost } from '@/client/sdk.gen';
+import { createWorkflowFromTemplateApiV1WorkflowCreateTemplatePost, createWorkflowRunApiV1WorkflowWorkflowIdRunsPost } from '@/client/sdk.gen';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import {
@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/lib/auth';
 import logger from '@/lib/logger';
+import { getRandomId } from '@/lib/utils';
 
 export default function CreateWorkflowPage() {
     const router = useRouter();
@@ -72,8 +73,34 @@ export default function CreateWorkflowPage() {
         }
     };
 
-    const handleModalContinue = () => {
-        if (workflowId) {
+    const handleModalContinue = async () => {
+        if (!workflowId || !user) return;
+
+        try {
+            const accessToken = await getAccessToken();
+            const workflowRunName = `WR-${getRandomId()}`;
+
+            // Create a workflow run
+            const response = await createWorkflowRunApiV1WorkflowWorkflowIdRunsPost({
+                path: {
+                    workflow_id: Number(workflowId),
+                },
+                body: {
+                    mode: 'smallwebrtc', // Same mode as "Web Call" button
+                    name: workflowRunName
+                },
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                },
+            });
+
+            // Navigate to the workflow run page
+            if (response.data?.id) {
+                router.push(`/workflow/${workflowId}/run/${response.data.id}`);
+            }
+        } catch (err) {
+            logger.error(`Error creating workflow run: ${err}`);
+            // Fallback to workflow page if run creation fails
             router.push(`/workflow/${workflowId}`);
         }
     };
@@ -222,16 +249,13 @@ export default function CreateWorkflowPage() {
                         <DialogDescription asChild>
                             <div className="text-base mt-4 space-y-3 text-gray-700 dark:text-gray-300">
                                 <p>
-                                    A starter template has been generated for your use case, with some randomised data and sample actions.
+                                    A voice agent workflow has been generated for your use case, with some artificial data and sample actions.
                                 </p>
                                 <p>
                                     The voice bot is pre-set to communicate in English with an American accent.
                                 </p>
                                 <p>
-                                    You&apos;re encouraged to first test the bot and then modify it to your specific requirements and location (currency/accent etc).
-                                </p>
-                                <p className="pt-2 text-sm">
-                                    Feel free to join our Slack channel for any queries and star us on GitHub.
+                                    Next steps would be to test the voice bot using web call, and then modify it to suit your use case.
                                 </p>
                             </div>
                         </DialogDescription>
@@ -241,7 +265,7 @@ export default function CreateWorkflowPage() {
                             onClick={handleModalContinue}
                             className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 font-semibold"
                         >
-                            Continue to Workflow
+                            Start Web Call
                             <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                             </svg>
