@@ -1,17 +1,19 @@
 'use client';
 
-import { ArrowLeft, FileText, Video } from 'lucide-react';
+import { FileText, Video } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import BrowserCall from '@/app/workflow/[workflowId]/run/[runId]/BrowserCall';
 import WorkflowLayout from '@/app/workflow/WorkflowLayout';
 import { getWorkflowRunApiV1WorkflowWorkflowIdRunsRunIdGet } from '@/client/sdk.gen';
 import { MediaPreviewButtons, MediaPreviewDialog } from '@/components/MediaPreviewDialog';
+import { OnboardingTooltip } from '@/components/onboarding/OnboardingTooltip';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useOnboarding } from '@/context/OnboardingContext';
 import { useAuth } from '@/lib/auth';
 import { downloadFile } from '@/lib/files';
 
@@ -30,6 +32,8 @@ export default function WorkflowRunPage() {
     const auth = useAuth();
     const [workflowRun, setWorkflowRun] = useState<WorkflowRunResponse | null>(null);
     const [accessToken, setAccessToken] = useState<string | null>(null);
+    const { hasSeenTooltip, markTooltipSeen } = useOnboarding();
+    const customizeButtonRef = useRef<HTMLButtonElement>(null);
 
     // Redirect if not authenticated
     useEffect(() => {
@@ -76,23 +80,6 @@ export default function WorkflowRunPage() {
         fetchWorkflowRun();
     }, [params.workflowId, params.runId, auth]);
 
-    const backButton = (
-        <div className="flex gap-2">
-            <Link href={`/workflow/${params.workflowId}`}>
-                <Button variant="outline" size="sm" className="flex items-center gap-1">
-                    <ArrowLeft className="h-4 w-4" />
-                    Workflow
-                </Button>
-            </Link>
-            <Link href={`/workflow/${params.workflowId}/runs`}>
-                <Button variant="outline" size="sm" className="flex items-center gap-1">
-                    <ArrowLeft className="h-4 w-4" />
-                    Workflow Runs
-                </Button>
-            </Link>
-        </div>
-    );
-
     let returnValue = null;
 
     if (isLoading) {
@@ -123,12 +110,31 @@ export default function WorkflowRunPage() {
                 <div className="w-full max-w-4xl space-y-6">
                     <Card className="border-gray-100">
                         <CardHeader className="flex flex-row items-center justify-between">
-                            <CardTitle className="text-2xl">Agent Run Completed</CardTitle>
-                            <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
-                                <svg className="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                                </svg>
+                            <div className="flex items-center gap-4">
+                                <CardTitle className="text-2xl">Agent Run Completed</CardTitle>
+                                <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
+                                    <svg className="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </div>
                             </div>
+                            <Link href={`/workflow/${params.workflowId}`}>
+                                <Button
+                                    ref={customizeButtonRef}
+                                    variant="outline"
+                                    className="gap-2"
+                                    onClick={() => {
+                                        if (!hasSeenTooltip('customize_workflow')) {
+                                            markTooltipSeen('customize_workflow');
+                                        }
+                                    }}
+                                >
+                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                    Customize Workflow
+                                </Button>
+                            </Link>
                         </CardHeader>
                         <CardContent>
                             <p className="text-gray-600 mb-8">Your voice agent run has been completed successfully. You can preview or download the transcript and recording.</p>
@@ -207,9 +213,21 @@ export default function WorkflowRunPage() {
     }
 
     return (
-        <WorkflowLayout backButton={backButton}>
+        <WorkflowLayout>
             {returnValue}
             {dialog}
+
+            {/* Onboarding Tooltip for Customize Workflow */}
+            {workflowRun?.is_completed && (
+                <OnboardingTooltip
+                    title='Customize Your Workflow'
+                    targetRef={customizeButtonRef}
+                    message="Edit your workflow to adjust the voice agent's behavior, add new steps, or modify the conversation flow."
+                    onDismiss={() => markTooltipSeen('customize_workflow')}
+                    showNext={false}
+                    isVisible={!hasSeenTooltip('customize_workflow')}
+                />
+            )}
         </WorkflowLayout>
     );
 }

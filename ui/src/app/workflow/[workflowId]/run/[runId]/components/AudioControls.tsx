@@ -73,7 +73,6 @@ export const AudioControls = ({
         <div className="flex flex-col items-center justify-center space-y-6 p-8">
             {!connectionActive ? (
                 <>
-                    <p className="text-sm text-gray-600">Ready to start your call</p>
                     <button
                         onClick={start}
                         disabled={isStarting}

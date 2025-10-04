@@ -12,6 +12,7 @@ import { OnboardingTooltip } from '@/components/onboarding/OnboardingTooltip';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { WORKFLOW_RUN_MODES } from '@/constants/workflowRunModes';
 import { useOnboarding } from '@/context/OnboardingContext';
 import { useUserConfig } from "@/context/UserConfigContext";
 import { useAuth } from '@/lib/auth';
@@ -203,7 +204,7 @@ const WorkflowHeader = ({ isDirty, workflowName, rfInstance, onRun, workflowId, 
                     if (!hasSeenTooltip('web_call')) {
                         markTooltipSeen('web_call');
                     }
-                    onRun("smallwebrtc"); // Don't change the mode since its defined in the database enum
+                    onRun(WORKFLOW_RUN_MODES.SMALL_WEBRTC);
                 }}
                 disabled={hasValidationErrors}
             >
