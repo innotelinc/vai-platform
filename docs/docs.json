@@ -1,0 +1,75 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Dograh AI",
+  "colors": {
+    "primary": "#16A34A",
+    "light": "#07C983",
+    "dark": "#15803D"
+  },
+  "favicon": "/favicon.ico",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Guides",
+        "groups": [
+          {
+            "group": "Getting started",
+            "pages": [
+              {
+                "group": "Introduction",
+                "pages": [
+                  "getting-started/index",
+                  "getting-started/prerequisites",
+                  "getting-started/troubleshooting"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "Telephony Integrations",
+            "pages": [
+              "telephony/twilio"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg",
+    "href": "https://docs.dograh.com"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Support",
+        "href": "https://github.com/dograh-hq/dograh/issues/new/choose"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Dashboard",
+      "href": "https://app.dograh.com"
+    }
+  },
+  "contextual": {
+    "options": [
+     "copy",
+     "view",
+     "chatgpt",
+     "claude",
+     "perplexity",
+     "mcp",
+     "cursor",
+     "vscode"
+   ]
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/dograh-hq",
+      "linkedin": "https://linkedin.com/company/dograh"
+    }
+  }
+}
