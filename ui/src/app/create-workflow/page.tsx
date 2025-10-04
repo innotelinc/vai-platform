@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { WORKFLOW_RUN_MODES } from '@/constants/workflowRunModes';
 import { useAuth } from '@/lib/auth';
 import logger from '@/lib/logger';
 import { getRandomId } from '@/lib/utils';
@@ -86,7 +87,7 @@ export default function CreateWorkflowPage() {
                     workflow_id: Number(workflowId),
                 },
                 body: {
-                    mode: 'smallwebrtc', // Same mode as "Web Call" button
+                    mode: WORKFLOW_RUN_MODES.SMALL_WEBRTC, // Same mode as "Web Call" button
                     name: workflowRunName
                 },
                 headers: {
