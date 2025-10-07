@@ -3,6 +3,8 @@
 import { Loader2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
+import Footer from './Footer';
+
 // Only load Stack's SignIn component when Stack provider is active
 const SignIn = dynamic(
   () => import('@stackframe/stack').then(mod => ({ default: mod.SignIn })),
@@ -19,9 +21,15 @@ export default function SignInClient() {
           <h1 className="text-2xl font-bold mb-4">Local Authentication</h1>
           <p className="text-gray-600">Local authentication is enabled. No sign-in required.</p>
         </div>
+        <Footer />
       </div>
     );
   }
 
-  return <SignIn />;
+  return (
+    <>
+      <SignIn />
+      <Footer />
+    </>
+  );
 }
