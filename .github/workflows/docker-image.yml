@@ -1,11 +1,10 @@
 name: Build and Push Docker Images
 
 on:
-  push:
-    branches:
-      - main
+  release:
+    types: [published]
 
-# Ensure only one workflow run per branch at a time; cancel any in-progress runs on new push
+# Ensure only one workflow run per branch at a time; cancel any in-progress runs on new push 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -19,7 +18,7 @@ jobs:
     strategy:
       matrix:
         service: 
-          - "dograh-api|api/Dockerfile|./api"
+          - "dograh-api|api/Dockerfile|."
           - "dograh-ui|ui/Dockerfile|./ui"
 
     steps:
