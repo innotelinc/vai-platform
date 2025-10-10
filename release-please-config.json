@@ -2,7 +2,7 @@
     "packages": {
       ".": {
         "release-type": "simple",
-        "package-name": "dograh-copy",
+        "package-name": "dograh",
         "changelog-sections": [
           {"type": "feat", "section": "Features", "hidden": false},
           {"type": "fix", "section": "Bug Fixes", "hidden": false},
