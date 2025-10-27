@@ -261,11 +261,6 @@ export type ImpersonateResponse = {
     access_token: string;
 };
 
-export type InitiateCallRequest = {
-    workflow_id: number;
-    workflow_run_id?: number | null;
-};
-
 export type IntegrationResponse = {
     id: number;
     integration_id: string;
@@ -390,6 +385,7 @@ export type SuperuserWorkflowRunsListResponse = {
  */
 export type TelephonyConfigurationResponse = {
     twilio?: TwilioConfigurationResponse | null;
+    vonage?: VonageConfigurationResponse | null;
 };
 
 export type TestSessionResponse = {
@@ -500,6 +496,45 @@ export type ValidationError = {
     loc: Array<string | number>;
     msg: string;
     type: string;
+};
+
+/**
+ * Request schema for Vonage configuration.
+ */
+export type VonageConfigurationRequest = {
+    provider?: string;
+    /**
+     * Vonage API Key
+     */
+    api_key?: string | null;
+    /**
+     * Vonage API Secret
+     */
+    api_secret?: string | null;
+    /**
+     * Vonage Application ID
+     */
+    application_id: string;
+    /**
+     * Private key for JWT generation
+     */
+    private_key: string;
+    /**
+     * List of Vonage phone numbers (without + prefix)
+     */
+    from_numbers: Array<string>;
+};
+
+/**
+ * Response schema for Vonage configuration with masked sensitive fields.
+ */
+export type VonageConfigurationResponse = {
+    provider: string;
+    application_id: string;
+    api_key: string | null;
+    api_secret: string | null;
+    private_key: string;
+    from_numbers: Array<string>;
 };
 
 export type WorkflowError = {
@@ -621,8 +656,110 @@ export type WorkflowTemplateResponse = {
     created_at: string;
 };
 
+export type ApiRoutesTelephonyInitiateCallRequest = {
+    workflow_id: number;
+    workflow_run_id?: number | null;
+    phone_number?: string | null;
+};
+
+export type ApiRoutesTwilioInitiateCallRequest = {
+    workflow_id: number;
+    workflow_run_id?: number | null;
+};
+
+export type InitiateCallApiV1TelephonyInitiateCallPostData = {
+    body: ApiRoutesTelephonyInitiateCallRequest;
+    headers?: {
+        authorization?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/telephony/initiate-call';
+};
+
+export type InitiateCallApiV1TelephonyInitiateCallPostErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type InitiateCallApiV1TelephonyInitiateCallPostError = InitiateCallApiV1TelephonyInitiateCallPostErrors[keyof InitiateCallApiV1TelephonyInitiateCallPostErrors];
+
+export type InitiateCallApiV1TelephonyInitiateCallPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type HandleStatusCallbackApiV1TelephonyStatusCallbackWorkflowRunIdPostData = {
+    body?: never;
+    headers?: {
+        'x-twilio-signature'?: string | null;
+    };
+    path: {
+        workflow_run_id: number;
+    };
+    query?: never;
+    url: '/api/v1/telephony/status-callback/{workflow_run_id}';
+};
+
+export type HandleStatusCallbackApiV1TelephonyStatusCallbackWorkflowRunIdPostErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type HandleStatusCallbackApiV1TelephonyStatusCallbackWorkflowRunIdPostError = HandleStatusCallbackApiV1TelephonyStatusCallbackWorkflowRunIdPostErrors[keyof HandleStatusCallbackApiV1TelephonyStatusCallbackWorkflowRunIdPostErrors];
+
+export type HandleStatusCallbackApiV1TelephonyStatusCallbackWorkflowRunIdPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type HandleVonageEventsApiV1TelephonyEventsWorkflowRunIdPostData = {
+    body?: never;
+    path: {
+        workflow_run_id: number;
+    };
+    query?: never;
+    url: '/api/v1/telephony/events/{workflow_run_id}';
+};
+
+export type HandleVonageEventsApiV1TelephonyEventsWorkflowRunIdPostErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type HandleVonageEventsApiV1TelephonyEventsWorkflowRunIdPostError = HandleVonageEventsApiV1TelephonyEventsWorkflowRunIdPostErrors[keyof HandleVonageEventsApiV1TelephonyEventsWorkflowRunIdPostErrors];
+
+export type HandleVonageEventsApiV1TelephonyEventsWorkflowRunIdPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
 export type InitiateCallApiV1TwilioInitiateCallPostData = {
-    body: InitiateCallRequest;
+    body: ApiRoutesTwilioInitiateCallRequest;
     headers?: {
         authorization?: string | null;
     };
@@ -1957,7 +2094,9 @@ export type GetTelephonyConfigurationApiV1OrganizationsTelephonyConfigGetData = 
         authorization?: string | null;
     };
     path?: never;
-    query?: never;
+    query?: {
+        provider?: string | null;
+    };
     url: '/api/v1/organizations/telephony-config';
 };
 
@@ -1984,7 +2123,7 @@ export type GetTelephonyConfigurationApiV1OrganizationsTelephonyConfigGetRespons
 export type GetTelephonyConfigurationApiV1OrganizationsTelephonyConfigGetResponse = GetTelephonyConfigurationApiV1OrganizationsTelephonyConfigGetResponses[keyof GetTelephonyConfigurationApiV1OrganizationsTelephonyConfigGetResponses];
 
 export type SaveTelephonyConfigurationApiV1OrganizationsTelephonyConfigPostData = {
-    body: TwilioConfigurationRequest;
+    body: TwilioConfigurationRequest | VonageConfigurationRequest;
     headers?: {
         authorization?: string | null;
     };
