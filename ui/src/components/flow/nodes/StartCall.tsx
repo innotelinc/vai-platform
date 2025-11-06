@@ -1,6 +1,6 @@
 import { NodeProps, NodeToolbar, Position } from "@xyflow/react";
 import { Edit, Play } from "lucide-react";
-import { memo, useState } from "react";
+import { memo, useEffect, useState } from "react";
 
 import { useWorkflow } from "@/app/workflow/[workflowId]/contexts/WorkflowContext";
 import { FlowNodeData } from "@/components/flow/types";
@@ -95,15 +95,34 @@ export const StartCall = memo(({ data, selected, id }: StartCallNodeProps) => {
         setOpen(newOpen);
     };
 
+    // Update form state when data changes (e.g., from undo/redo)
+    useEffect(() => {
+        if (open) {
+            setPrompt(data.prompt ?? "");
+            setIsStatic(data.is_static ?? true);
+            setName(data.name);
+            setAllowInterrupt(data.allow_interrupt ?? true);
+            setAddGlobalPrompt(data.add_global_prompt ?? true);
+            setWaitForUserResponse(data.wait_for_user_response ?? false);
+            setDetectVoicemail(data.detect_voicemail ?? true);
+            setDelayedStart(data.delayed_start ?? false);
+            setDelayedStartDuration(data.delayed_start_duration ?? 3);
+        }
+    }, [data, open]);
+
     return (
         <>
             <NodeContent
                 selected={selected}
                 invalid={data.invalid}
+                selected_through_edge={data.selected_through_edge}
+                hovered_through_edge={data.hovered_through_edge}
                 title="Start Call"
                 icon={<Play />}
                 bgColor="bg-green-300"
                 hasSourceHandle={true}
+                onDoubleClick={() => setOpen(true)}
+                nodeId={id}
             >
                 <div className="text-sm text-muted-foreground">
                     {data.prompt?.length > 30 ? `${data.prompt.substring(0, 30)}...` : data.prompt}

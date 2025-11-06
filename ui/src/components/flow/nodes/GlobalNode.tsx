@@ -1,6 +1,6 @@
 import { NodeProps, NodeToolbar, Position } from "@xyflow/react";
 import { Edit, Headset, Trash2Icon } from "lucide-react";
-import { memo, useState } from "react";
+import { memo, useEffect, useState } from "react";
 
 import { useWorkflow } from "@/app/workflow/[workflowId]/contexts/WorkflowContext";
 import { FlowNodeData } from "@/components/flow/types";
@@ -56,14 +56,26 @@ export const GlobalNode = memo(({ data, selected, id }: GlobalNodeProps) => {
         setOpen(newOpen);
     };
 
+    // Update form state when data changes (e.g., from undo/redo)
+    useEffect(() => {
+        if (open) {
+            setPrompt(data.prompt);
+            setName(data.name);
+        }
+    }, [data, open]);
+
     return (
         <>
             <NodeContent
                 selected={selected}
                 invalid={data.invalid}
+                selected_through_edge={data.selected_through_edge}
+                hovered_through_edge={data.hovered_through_edge}
                 title={data.name || 'Global'}
                 icon={<Headset />}
                 bgColor="bg-orange-300"
+                onDoubleClick={() => setOpen(true)}
+                nodeId={id}
             >
                 <div className="text-sm text-muted-foreground">
                     {data.prompt?.length > 30 ? `${data.prompt.substring(0, 30)}...` : data.prompt}

@@ -1,6 +1,6 @@
 import { NodeProps, NodeToolbar, Position } from "@xyflow/react";
 import { Edit, Headset, PlusIcon,Trash2Icon } from "lucide-react";
-import { memo, useState } from "react";
+import { memo, useEffect, useState } from "react";
 
 import { useWorkflow } from "@/app/workflow/[workflowId]/contexts/WorkflowContext";
 import { ExtractionVariable,FlowNodeData } from "@/components/flow/types";
@@ -83,16 +83,33 @@ export const AgentNode = memo(({ data, selected, id }: AgentNodeProps) => {
         setOpen(newOpen);
     };
 
+    // Update form state when data changes (e.g., from undo/redo)
+    useEffect(() => {
+        if (open) {
+            setPrompt(data.prompt);
+            setName(data.name);
+            setAllowInterrupt(data.allow_interrupt ?? true);
+            setExtractionEnabled(data.extraction_enabled ?? false);
+            setExtractionPrompt(data.extraction_prompt ?? "");
+            setVariables(data.extraction_variables ?? []);
+            setAddGlobalPrompt(data.add_global_prompt ?? true);
+        }
+    }, [data, open]);
+
     return (
         <>
             <NodeContent
                 selected={selected}
                 invalid={data.invalid}
+                selected_through_edge={data.selected_through_edge}
+                hovered_through_edge={data.hovered_through_edge}
                 title={data.name || 'Agent'}
                 icon={<Headset />}
                 bgColor="bg-blue-300"
                 hasSourceHandle={true}
                 hasTargetHandle={true}
+                onDoubleClick={() => setOpen(true)}
+                nodeId={id}
             >
                 <div className="text-sm text-muted-foreground">
                     {data.prompt?.length > 30 ? `${data.prompt.substring(0, 30)}...` : data.prompt}

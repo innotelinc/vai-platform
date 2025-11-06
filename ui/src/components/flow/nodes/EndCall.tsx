@@ -1,6 +1,6 @@
 import { NodeProps, NodeToolbar, Position } from "@xyflow/react";
 import { Edit, OctagonX, PlusIcon, Trash2Icon } from "lucide-react";
-import { memo, useState } from "react";
+import { memo, useEffect, useState } from "react";
 
 import { useWorkflow } from "@/app/workflow/[workflowId]/contexts/WorkflowContext";
 import { ExtractionVariable, FlowNodeData } from "@/components/flow/types";
@@ -87,15 +87,32 @@ export const EndCall = memo(({ data, selected, id }: EndCallNodeProps) => {
         setOpen(newOpen);
     };
 
+    // Update form state when data changes (e.g., from undo/redo)
+    useEffect(() => {
+        if (open) {
+            setPrompt(data.prompt);
+            setIsStatic(data.is_static ?? true);
+            setName(data.name);
+            setExtractionEnabled(data.extraction_enabled ?? false);
+            setExtractionPrompt(data.extraction_prompt ?? "");
+            setVariables(data.extraction_variables ?? []);
+            setAddGlobalPrompt(data.add_global_prompt ?? true);
+        }
+    }, [data, open]);
+
     return (
         <>
             <NodeContent
                 selected={selected}
                 invalid={data.invalid}
+                selected_through_edge={data.selected_through_edge}
+                hovered_through_edge={data.hovered_through_edge}
                 title="End Call"
                 icon={<OctagonX />}
                 bgColor="bg-red-300"
                 hasTargetHandle={true}
+                onDoubleClick={() => setOpen(true)}
+                nodeId={id}
             >
                 <div className="text-sm text-muted-foreground">
                     {data.prompt?.length > 30 ? `${data.prompt.substring(0, 30)}...` : data.prompt}

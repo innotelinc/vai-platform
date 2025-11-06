@@ -8,6 +8,8 @@ import { NodeHeader, NodeHeaderIcon, NodeHeaderTitle } from "@/components/flow/n
 interface NodeContentProps {
     selected: boolean;
     invalid?: boolean;
+    selected_through_edge?: boolean;
+    hovered_through_edge?: boolean;
     title: string;
     icon: ReactNode;
     bgColor: string;
@@ -15,11 +17,15 @@ interface NodeContentProps {
     hasTargetHandle?: boolean;
     children?: ReactNode;
     className?: string;
+    onDoubleClick?: () => void;
+    nodeId?: string;
 }
 
 export const NodeContent = ({
     selected,
     invalid,
+    selected_through_edge,
+    hovered_through_edge,
     title,
     icon,
     bgColor,
@@ -27,13 +33,22 @@ export const NodeContent = ({
     hasTargetHandle = false,
     children,
     className = "",
+    onDoubleClick,
+    nodeId,
 }: NodeContentProps) => {
     return (
-        <BaseNode selected={selected} invalid={invalid} className={`p-0 overflow-hidden ${className}`}>
+        <BaseNode
+            selected={selected}
+            invalid={invalid}
+            selected_through_edge={selected_through_edge}
+            hovered_through_edge={hovered_through_edge}
+            className={`p-0 overflow-hidden ${className}`}
+            onDoubleClick={onDoubleClick}
+        >
             {hasTargetHandle && <BaseHandle type="target" position={Position.Top} />}
             <NodeHeader className={`px-3 py-2 border-b ${bgColor}`}>
                 <NodeHeaderIcon>{icon}</NodeHeaderIcon>
-                <NodeHeaderTitle>{title}</NodeHeaderTitle>
+                <NodeHeaderTitle>{title} - NodeID: {nodeId}</NodeHeaderTitle>
             </NodeHeader>
             <div className="p-3">
                 {children}

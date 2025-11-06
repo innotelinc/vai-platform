@@ -5,13 +5,11 @@ import {
     OnEdgesChange,
     OnNodesChange,
     ReactFlowInstance,
-    useEdgesState,
-    useNodesState
 } from "@xyflow/react";
-import { addEdge } from "@xyflow/react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
+import { useWorkflowStore } from "@/app/workflow/[workflowId]/stores/workflowStore";
 import {
     createWorkflowRunApiV1WorkflowWorkflowIdRunsPost,
     updateWorkflowApiV1WorkflowWorkflowIdPut,
@@ -19,10 +17,9 @@ import {
 } from "@/client";
 import { WorkflowError } from "@/client/types.gen";
 import { FlowEdge, FlowNode, NodeType } from "@/components/flow/types";
-import { useAuth } from '@/lib/auth';
 import logger from '@/lib/logger';
-import { getRandomId } from "@/lib/utils";
-import { DEFAULT_WORKFLOW_CONFIGURATIONS,WorkflowConfigurations } from "@/types/workflow-configurations";
+import { getNextNodeId, getRandomId } from "@/lib/utils";
+import { WorkflowConfigurations } from "@/types/workflow-configurations";
 
 export function getDefaultAllowInterrupt(type: string = NodeType.START_CALL): boolean {
     switch (type) {
@@ -49,9 +46,9 @@ const defaultNodes: FlowNode[] = [
     },
 ];
 
-const getNewNode = (type: string, position: { x: number, y: number }) => {
+const getNewNode = (type: string, position: { x: number, y: number }, existingNodes: FlowNode[]) => {
     return {
-        id: `${getRandomId()}`,
+        id: getNextNodeId(existingNodes),
         type,
         position,
         data: {
@@ -82,14 +79,56 @@ interface UseWorkflowStateProps {
     };
     initialTemplateContextVariables?: Record<string, string>;
     initialWorkflowConfigurations?: WorkflowConfigurations;
+    user: { id: string; email?: string };  // Minimal user type needed
+    getAccessToken: () => Promise<string>;
 }
 
-export const useWorkflowState = ({ initialWorkflowName, workflowId, initialFlow, initialTemplateContextVariables, initialWorkflowConfigurations }: UseWorkflowStateProps) => {
-    const rfInstance = useRef<ReactFlowInstance<FlowNode, FlowEdge> | null>(null);
+export const useWorkflowState = ({
+    initialWorkflowName,
+    workflowId,
+    initialFlow,
+    initialTemplateContextVariables,
+    initialWorkflowConfigurations,
+    user,
+    getAccessToken
+}: UseWorkflowStateProps) => {
     const router = useRouter();
-    const { user, getAccessToken } = useAuth();
-    const [nodes, setNodes] = useNodesState(
-        initialFlow?.nodes?.length
+    const rfInstance = useRef<ReactFlowInstance<FlowNode, FlowEdge> | null>(null);
+
+    // Get state and actions from the store
+    const {
+        nodes,
+        edges,
+        workflowName,
+        isDirty,
+        isAddNodePanelOpen,
+        workflowValidationErrors,
+        templateContextVariables,
+        workflowConfigurations,
+        initializeWorkflow,
+        setNodes,
+        setEdges,
+        setWorkflowName,
+        setIsDirty,
+        setIsAddNodePanelOpen,
+        setWorkflowValidationErrors,
+        setTemplateContextVariables,
+        setWorkflowConfigurations,
+        clearValidationErrors,
+        markNodeAsInvalid,
+        markEdgeAsInvalid,
+        setRfInstance,
+    } = useWorkflowStore();
+
+    // Get undo/redo functions from the store
+    const undo = useWorkflowStore((state) => state.undo);
+    const redo = useWorkflowStore((state) => state.redo);
+    const canUndo = useWorkflowStore((state) => state.canUndo());
+    const canRedo = useWorkflowStore((state) => state.canRedo());
+
+    // Initialize workflow on mount
+    useEffect(() => {
+        const initialNodes = initialFlow?.nodes?.length
             ? initialFlow.nodes.map(node => ({
                 ...node,
                 data: {
@@ -100,43 +139,74 @@ export const useWorkflowState = ({ initialWorkflowName, workflowId, initialFlow,
                         : getDefaultAllowInterrupt(node.type),
                 }
             }))
-            : defaultNodes
-    );
-    const [edges, setEdges] = useEdgesState(initialFlow?.edges ?? []);
-    const [isAddNodePanelOpen, setIsAddNodePanelOpen] = useState(false);
-    const [workflowName, setWorkflowName] = useState(initialWorkflowName);
-    const [isEditingName, setIsEditingName] = useState(false);
-    const [isDirty, setIsDirty] = useState(false);
-    const [workflowValidationErrors, setWorkflowValidationErrors] = useState<WorkflowError[]>([]);
-    const [templateContextVariables, setTemplateContextVariables] = useState<Record<string, string>>(
-        initialTemplateContextVariables || {}
-    );
-    const [workflowConfigurations, setWorkflowConfigurations] = useState<WorkflowConfigurations | null>(
-        initialWorkflowConfigurations || DEFAULT_WORKFLOW_CONFIGURATIONS
-    );
+            : defaultNodes;
+
+        initializeWorkflow(
+            workflowId,
+            initialWorkflowName,
+            initialNodes,
+            initialFlow?.edges ?? [],
+            initialTemplateContextVariables,
+            initialWorkflowConfigurations
+        );
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Set up keyboard shortcuts for undo/redo
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Check if we're in an input field
+            const target = e.target as HTMLElement;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+                return;
+            }
+
+            // Undo: Cmd/Ctrl + Z
+            if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+                e.preventDefault();
+                if (canUndo) {
+                    undo();
+                }
+            }
+            // Redo: Cmd/Ctrl + Shift + Z or Cmd/Ctrl + Y
+            else if (
+                ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'z') ||
+                ((e.metaKey || e.ctrlKey) && e.key === 'y')
+            ) {
+                e.preventDefault();
+                if (canRedo) {
+                    redo();
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [undo, redo, canUndo, canRedo]);
 
     const handleNodeSelect = useCallback((nodeType: string) => {
-        /*
-            Used to add new node to the workflow. Receives nodeType as param.
-            Example: nodeType can be agentNode/ startNode etc. as defined by NodeType in
-                types.ts
+        if (!rfInstance.current) return;
 
-            We then pass nodeTypes which contais the NodeType keyword and the component.
-            Those components then contain all the component speecific functioanlity like edit
-            button etc.
+        const position = rfInstance.current.screenToFlowPosition({
+            x: window.innerWidth / 2,
+            y: window.innerHeight / 2,
+        });
 
-        */
-        const newNode = getNewNode(nodeType, { x: 150, y: 150 });
-        setNodes((nds) => [...nds, newNode]);
+        const newNode = {
+            ...getNewNode(nodeType, position, nodes),
+            selected: true, // Mark the new node as selected
+        };
+
+        // Use addNodes from ReactFlow instance
+        rfInstance.current.addNodes([newNode]);
         setIsAddNodePanelOpen(false);
-    }, [setNodes, setIsAddNodePanelOpen]);
+    }, [nodes, setIsAddNodePanelOpen]);
 
     const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setWorkflowName(e.target.value);
         setIsDirty(true);
     };
 
-    // Validate workflow function (without saving)
+    // Validate workflow function
     const validateWorkflow = useCallback(async () => {
         if (!user) return;
         try {
@@ -150,106 +220,48 @@ export const useWorkflowState = ({ initialWorkflowName, workflowId, initialFlow,
                 },
             });
 
-            // Reset validation state for all nodes and edges
-            setNodes((nds) => nds.map(node => ({ ...node, data: { ...node.data, invalid: false, validationMessage: null } })));
-            setEdges((eds) => eds.map(edge => ({ ...edge, data: { ...edge.data, invalid: false, validationMessage: null } })));
-            setWorkflowValidationErrors([]);
+            // Clear validation errors first
+            clearValidationErrors();
 
-            // Check if we have a 422 error with validation errors
+            // Check if we have validation errors
             if (response.error) {
-                // The error could be in different formats depending on the status code
                 let errors: WorkflowError[] = [];
-
-                // Type assertion for validation response structure
                 const errorResponse = response.error as {
                     is_valid?: boolean;
                     errors?: WorkflowError[];
                     detail?: { errors: WorkflowError[] };
                 };
 
-                // For 422 responses, the error contains the validation response
                 if (errorResponse.is_valid === false && errorResponse.errors) {
                     errors = errorResponse.errors;
-                }
-                // Also check for detail.errors format
-                else if (errorResponse.detail?.errors) {
+                } else if (errorResponse.detail?.errors) {
                     errors = errorResponse.detail.errors;
                 }
 
                 if (errors.length > 0) {
                     // Update nodes with validation state
-                    setNodes((nds) => nds.map(node => {
-                        const nodeErrors = errors.filter((err) => err.kind === 'node' && err.id === node.id);
-                        if (nodeErrors.length > 0) {
-                            return {
-                                ...node,
-                                data: {
-                                    ...node.data,
-                                    invalid: true,
-                                    validationMessage: nodeErrors.map(err => err.message).join(', ')
-                                }
-                            };
+                    errors.forEach((error) => {
+                        if (error.kind === 'node' && error.id) {
+                            markNodeAsInvalid(error.id, error.message);
+                        } else if (error.kind === 'edge' && error.id) {
+                            markEdgeAsInvalid(error.id, error.message);
                         }
-                        return node;
-                    }));
+                    });
 
-                    // Update edges with validation state
-                    setEdges((eds) => eds.map(edge => {
-                        const edgeErrors = errors.filter((err) => err.kind === 'edge' && err.id === edge.id);
-                        if (edgeErrors.length > 0) {
-                            return {
-                                ...edge,
-                                data: {
-                                    ...edge.data,
-                                    invalid: true,
-                                    validationMessage: edgeErrors.map(err => err.message).join(', ')
-                                }
-                            };
-                        }
-                        return edge;
-                    }));
-
-                    // Set workflow validation errors (all types of errors)
                     setWorkflowValidationErrors(errors);
                 }
             } else if (response.data) {
-                // If we get a 200 response with data, check if it's valid
                 if (response.data.is_valid === false && response.data.errors) {
                     const errors = response.data.errors;
 
-                    // Update nodes with validation state
-                    setNodes((nds) => nds.map(node => {
-                        const nodeErrors = errors.filter((err) => err.kind === 'node' && err.id === node.id);
-                        if (nodeErrors.length > 0) {
-                            return {
-                                ...node,
-                                data: {
-                                    ...node.data,
-                                    invalid: true,
-                                    validationMessage: nodeErrors.map((err) => err.message).join(', ')
-                                }
-                            };
+                    errors.forEach((error) => {
+                        if (error.kind === 'node' && error.id) {
+                            markNodeAsInvalid(error.id, error.message);
+                        } else if (error.kind === 'edge' && error.id) {
+                            markEdgeAsInvalid(error.id, error.message);
                         }
-                        return node;
-                    }));
+                    });
 
-                    // Update edges with validation state
-                    setEdges((eds) => eds.map(edge => {
-                        const edgeErrors = errors.filter((err) => err.kind === 'edge' && err.id === edge.id);
-                        if (edgeErrors.length > 0) {
-                            return {
-                                ...edge,
-                                data: {
-                                    ...edge.data,
-                                    invalid: true,
-                                    validationMessage: edgeErrors.map((err) => err.message).join(', ')
-                                }
-                            };
-                        }
-                        return edge;
-                    }));
-
-                    // Set workflow validation errors (all types of errors)
                     setWorkflowValidationErrors(errors);
                 } else {
                     logger.info('Workflow is valid');
@@ -258,13 +270,10 @@ export const useWorkflowState = ({ initialWorkflowName, workflowId, initialFlow,
         } catch (error) {
             logger.error(`Unexpected validation error: ${error}`);
         }
-    }, [workflowId, user, getAccessToken, setNodes, setEdges]);
+    }, [workflowId, user, getAccessToken, clearValidationErrors, markNodeAsInvalid, markEdgeAsInvalid, setWorkflowValidationErrors]);
 
-    // Save function
+    // Save workflow function
     const saveWorkflow = useCallback(async (updateWorkflowDefinition: boolean = true) => {
-        /*
-            validates and saves workflow
-        */
         if (!user || !rfInstance.current) return;
         const flow = rfInstance.current.toObject();
         const accessToken = await getAccessToken();
@@ -283,60 +292,43 @@ export const useWorkflowState = ({ initialWorkflowName, workflowId, initialFlow,
             });
             setIsDirty(false);
         } catch (error) {
-            logger.error(`Error auto-saving workflow: ${error}`);
+            logger.error(`Error saving workflow: ${error}`);
         }
 
         // Validate after saving
         await validateWorkflow();
-    }, [workflowId, workflowName, setIsDirty, user, getAccessToken, rfInstance, validateWorkflow]);
-
-    // Handle debounced save - REMOVED AUTOSAVE FUNCTIONALITY
-    // const debouncedSave = useCallback(() => {
-    //     // Clear any existing timeout
-    //     if (saveTimeoutRef.current) {
-    //         clearTimeout(saveTimeoutRef.current);
-    //     }
-
-    //     // Set a new timeout
-    //     saveTimeoutRef.current = setTimeout(() => {
-    //         saveWorkflow();
-    //         saveTimeoutRef.current = null;
-    //     }, 2000);
-    // }, [saveWorkflow]);
+    }, [workflowId, workflowName, setIsDirty, user, getAccessToken, validateWorkflow]);
 
     const onConnect: OnConnect = useCallback((connection) => {
-        setEdges((eds) => addEdge({
+        if (!rfInstance.current) return;
+
+        // Use addEdges from ReactFlow instance
+        rfInstance.current.addEdges([{
             ...connection,
+            id: `${connection.source}-${connection.target}`,
             data: {
                 label: '',
                 condition: ''
             }
-        }, eds));
-        setIsDirty(true);
-        // Trigger validation after connection
-        setTimeout(() => validateWorkflow(), 100);
-    }, [setEdges, validateWorkflow]);
+        }]);
+    }, []);
 
     const onEdgesChange: OnEdgesChange = useCallback(
-        (changes) => setEdges((eds) => {
-            const newEdges = applyEdgeChanges(changes, eds) as FlowEdge[];
-            setIsDirty(true);
-            // Trigger validation after edge changes
-            setTimeout(() => validateWorkflow(), 100);
-            return newEdges;
-        }),
-        [setEdges, validateWorkflow],
+        (changes) => {
+            const currentEdges = useWorkflowStore.getState().edges;
+            const newEdges = applyEdgeChanges(changes, currentEdges) as FlowEdge[];
+            setEdges(newEdges, changes);
+        },
+        [setEdges],
     );
 
     const onNodesChange: OnNodesChange = useCallback(
-        (changes) => setNodes((nds) => {
-            const newNodes = applyNodeChanges(changes, nds) as FlowNode[];
-            setIsDirty(true);
-            // Trigger validation after node changes
-            setTimeout(() => validateWorkflow(), 100);
-            return newNodes;
-        }),
-        [setNodes, validateWorkflow],
+        (changes) => {
+            const currentNodes = useWorkflowStore.getState().nodes;
+            const newNodes = applyNodeChanges(changes, currentNodes) as FlowNode[];
+            setNodes(newNodes, changes);
+        },
+        [setNodes],
     );
 
     const onRun = async (mode: string) => {
@@ -358,7 +350,7 @@ export const useWorkflowState = ({ initialWorkflowName, workflowId, initialFlow,
         router.push(`/workflow/${workflowId}/run/${response.data?.id}`);
     };
 
-    // Save template context variables function
+    // Save template context variables
     const saveTemplateContextVariables = useCallback(async (variables: Record<string, string>) => {
         if (!user) return;
         const accessToken = await getAccessToken();
@@ -382,10 +374,10 @@ export const useWorkflowState = ({ initialWorkflowName, workflowId, initialFlow,
             logger.error(`Error saving template context variables: ${error}`);
             throw error;
         }
-    }, [workflowId, workflowName, user, getAccessToken]);
+    }, [workflowId, workflowName, user, getAccessToken, setTemplateContextVariables]);
 
-    // Save workflow configurations function
-    const saveWorkflowConfigurations = useCallback(async (configurations: WorkflowConfigurations) => {
+    // Save workflow configurations
+    const saveWorkflowConfigurations = useCallback(async (configurations: WorkflowConfigurations, newWorkflowName: string) => {
         if (!user) return;
         const accessToken = await getAccessToken();
         try {
@@ -394,7 +386,7 @@ export const useWorkflowState = ({ initialWorkflowName, workflowId, initialFlow,
                     workflow_id: workflowId,
                 },
                 body: {
-                    name: workflowName,
+                    name: newWorkflowName,
                     workflow_definition: null,
                     workflow_configurations: configurations as Record<string, unknown>,
                 },
@@ -403,19 +395,25 @@ export const useWorkflowState = ({ initialWorkflowName, workflowId, initialFlow,
                 },
             });
             setWorkflowConfigurations(configurations);
+            setWorkflowName(newWorkflowName);
             logger.info('Workflow configurations saved successfully');
         } catch (error) {
             logger.error(`Error saving workflow configurations: ${error}`);
             throw error;
         }
-    }, [workflowId, workflowName, user, getAccessToken]);
+    }, [workflowId, user, getAccessToken, setWorkflowConfigurations, setWorkflowName]);
+
+    // Update rfInstance when it changes
+    useEffect(() => {
+        if (rfInstance.current) {
+            setRfInstance(rfInstance.current);
+        }
+    }, [setRfInstance]);
 
     // Validate workflow on mount
     useEffect(() => {
         validateWorkflow();
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-    // Removed useEffect for clearing auto-save timeout as autosave is disabled
 
     return {
         rfInstance,
@@ -423,16 +421,12 @@ export const useWorkflowState = ({ initialWorkflowName, workflowId, initialFlow,
         edges,
         isAddNodePanelOpen,
         workflowName,
-        isEditingName,
         isDirty,
         workflowValidationErrors,
         templateContextVariables,
         workflowConfigurations,
         setNodes,
-        setEdges,
         setIsAddNodePanelOpen,
-        setWorkflowName,
-        setIsEditingName,
         handleNodeSelect,
         handleNameChange,
         saveWorkflow,
@@ -441,6 +435,11 @@ export const useWorkflowState = ({ initialWorkflowName, workflowId, initialFlow,
         onNodesChange,
         onRun,
         saveTemplateContextVariables,
-        saveWorkflowConfigurations
+        saveWorkflowConfigurations,
+        // Export undo/redo state
+        undo,
+        redo,
+        canUndo,
+        canRedo,
     };
 };
