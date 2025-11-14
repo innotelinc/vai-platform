@@ -123,7 +123,7 @@ You can go to [https://docs.dograh.com](https://docs.dograh.com/) for our docume
   - Get help with setup and debugging
   - Stay up to date with contribution sprints
 
-👉 Join us → Dograh Community Slack
+👉 Join us → [Dograh Community Slack](https://join.slack.com/t/dograh-community/shared_invite/zt-3czr47sw5-MSg1J0kJ7IMPOCHF~03auQ)
 
 ## 🙌 Contributing
 
