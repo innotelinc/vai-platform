@@ -30,7 +30,8 @@ jobs:
         if: steps.check.outputs.is_announcement == 'true'
         id: prepare_message
         run: |
-          # Run the script with environment variables to avoid shell parsing issues
+          # Make script executable and run it
+          chmod +x ./scripts/prepare-slack-message.sh
           PAYLOAD=$(./scripts/prepare-slack-message.sh)
           
           # Set output for next step
