@@ -56,8 +56,8 @@ class StorageBackend(Enum):
 
 class WorkflowRunState(Enum):
     INITIALIZED = "initialized"  # Workflow run created, ready for connection
-    RUNNING = "running"          # Websocket connected and pipeline active
-    COMPLETED = "completed"      # Workflow run finished
+    RUNNING = "running"  # Websocket connected and pipeline active
+    COMPLETED = "completed"  # Workflow run finished
 
 
 class WorkflowRunStatus(Enum):
@@ -92,3 +92,20 @@ class RedisChannel(Enum):
     """Redis pub/sub channel names"""
 
     CAMPAIGN_EVENTS = "campaign_events"
+
+
+class TriggerState(Enum):
+    """Agent trigger state values"""
+
+    ACTIVE = "active"
+    ARCHIVED = "archived"
+
+
+class WebhookCredentialType(Enum):
+    """Webhook credential authentication types"""
+
+    NONE = "none"  # No authentication
+    API_KEY = "api_key"  # API key in header
+    BEARER_TOKEN = "bearer_token"  # Bearer token auth
+    BASIC_AUTH = "basic_auth"  # Username/password
+    CUSTOM_HEADER = "custom_header"  # Custom header key-value
