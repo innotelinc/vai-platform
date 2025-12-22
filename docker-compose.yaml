@@ -156,9 +156,10 @@ services:
       SENTRY_DSN: "https://d9387fed5f80e90781f1dbd9b2c0994c@o4509486225096704.ingest.us.sentry.io/4510124708200448"
 
       # TURN server configuration (for WebRTC NAT traversal in remote server)
-      NEXT_PUBLIC_TURN_HOST: "${TURN_HOST:-}"
-      NEXT_PUBLIC_TURN_USERNAME: "${TURN_USERNAME:-}"
-      NEXT_PUBLIC_TURN_PASSWORD: "${TURN_PASSWORD:-}"
+      # Fetched at runtime via /api/config/turn endpoint
+      TURN_HOST: "${TURN_HOST:-}"
+      TURN_USERNAME: "${TURN_USERNAME:-}"
+      TURN_PASSWORD: "${TURN_PASSWORD:-}"
     ports:
       - "3010:3010"
     depends_on:
