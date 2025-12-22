@@ -39,6 +39,12 @@ export const useWebSocketRTC = ({ workflowId, workflowRunId, accessToken, initia
     const useAudio = true;
     const audioCodec = 'default';
 
+    // TURN server configuration from environment variables (matching backend pattern)
+    const turnHost = process.env.NEXT_PUBLIC_TURN_HOST;
+    const turnUsername = process.env.NEXT_PUBLIC_TURN_USERNAME;
+    const turnPassword = process.env.NEXT_PUBLIC_TURN_PASSWORD;
+    const useTurn = !!(turnHost && turnUsername && turnPassword);
+
     const audioRef = useRef<HTMLAudioElement>(null);
     const pcRef = useRef<RTCPeerConnection | null>(null);
     const wsRef = useRef<WebSocket | null>(null);
@@ -67,8 +73,29 @@ export const useWebSocketRTC = ({ workflowId, workflowRunId, accessToken, initia
     }, [workflowId, workflowRunId, accessToken]);
 
     const createPeerConnection = () => {
+        // Build ICE servers list
+        const iceServers: RTCIceServer[] = [];
+
+        if (useStun) {
+            iceServers.push({ urls: ['stun:stun.l.google.com:19302'] });
+        }
+
+        if (useTurn && turnHost && turnUsername && turnPassword) {
+            // Add TURN server with credentials from environment variables
+            iceServers.push({
+                urls: [
+                    `turn:${turnHost}:3478`,           // TURN over UDP
+                    `turn:${turnHost}:3478?transport=tcp`, // TURN over TCP
+                ],
+                username: turnUsername,
+                credential: turnPassword
+            });
+
+            logger.info(`TURN server configured: ${turnHost}:3478`);
+        }
+
         const config: RTCConfiguration = {
-            iceServers: useStun ? [{ urls: ['stun:stun.l.google.com:19302'] }] : []
+            iceServers
         };
 
         const pc = new RTCPeerConnection(config);
