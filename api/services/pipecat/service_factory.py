@@ -179,11 +179,17 @@ def create_tts_service(user_config, audio_config: "AudioConfig"):
 
 def create_llm_service(user_config):
     """Create and return appropriate LLM service based on user configuration"""
+    # Handle both enum and string values for model
+    model_value = (
+        user_config.llm.model.value
+        if hasattr(user_config.llm.model, "value")
+        else user_config.llm.model
+    )
     if user_config.llm.provider == ServiceProviders.OPENAI.value:
-        if "gpt-5" in user_config.llm.model.value:
+        if "gpt-5" in model_value:
             return OpenAILLMService(
                 api_key=user_config.llm.api_key,
-                model=user_config.llm.model.value,
+                model=model_value,
                 params=OpenAILLMService.InputParams(
                     reasoning_effort="minimal", verbosity="low"
                 ),
@@ -191,16 +197,16 @@ def create_llm_service(user_config):
         else:
             return OpenAILLMService(
                 api_key=user_config.llm.api_key,
-                model=user_config.llm.model.value,
+                model=model_value,
                 params=OpenAILLMService.InputParams(temperature=0.1),
             )
     elif user_config.llm.provider == ServiceProviders.GROQ.value:
         print(
-            f"Creating Groq LLM service with API key: {user_config.llm.api_key} and model: {user_config.llm.model.value}"
+            f"Creating Groq LLM service with API key: {user_config.llm.api_key} and model: {model_value}"
         )
         return GroqLLMService(
             api_key=user_config.llm.api_key,
-            model=user_config.llm.model.value,
+            model=model_value,
             params=OpenAILLMService.InputParams(temperature=0.1),
         )
     elif user_config.llm.provider == ServiceProviders.GOOGLE.value:
@@ -208,21 +214,21 @@ def create_llm_service(user_config):
         # NOT_GIVEN sentinels that break Pydantic validation in GoogleLLMService.
         return GoogleLLMService(
             api_key=user_config.llm.api_key,
-            model=user_config.llm.model.value,
+            model=model_value,
             params=GoogleLLMService.InputParams(temperature=0.1),
         )
     elif user_config.llm.provider == ServiceProviders.AZURE.value:
         return AzureLLMService(
             api_key=user_config.llm.api_key,
             endpoint=user_config.llm.endpoint,
-            model=user_config.llm.model.value,  # Azure uses deployment name as model
+            model=model_value,  # Azure uses deployment name as model
             params=AzureLLMService.InputParams(temperature=0.1),
         )
     elif user_config.llm.provider == ServiceProviders.DOGRAH.value:
         return DograhLLMService(
             base_url=f"{MPS_API_URL}/api/v1/llm",
             api_key=user_config.llm.api_key,
-            model=user_config.llm.model.value,
+            model=model_value,
         )
     else:
         raise HTTPException(status_code=400, detail="Invalid LLM provider")
