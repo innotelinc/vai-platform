@@ -383,11 +383,12 @@ export default function ServiceConfiguration() {
             ? providerSchema.$defs[schema.$ref.split('/').pop() || '']
             : schema;
 
-        // Use VoiceSelector for voice field in TTS service (except Sarvam which uses enum)
+        // Use VoiceSelector for voice field in TTS service (except Sarvam which uses predefined options)
         if (service === "tts" && field === "voice") {
             const currentProvider = serviceProviders.tts;
-            // Sarvam uses enum-based voice selection, not VoiceSelector
-            if (currentProvider !== "sarvam" && !actualSchema?.enum) {
+            // Sarvam uses predefined voice options, not VoiceSelector
+            const hasVoiceOptions = actualSchema?.enum || actualSchema?.examples;
+            if (currentProvider !== "sarvam" && !hasVoiceOptions) {
                 return (
                     <VoiceSelector
                         provider={currentProvider}
@@ -478,7 +479,9 @@ export default function ServiceConfiguration() {
             );
         }
 
-        if (actualSchema?.enum) {
+        // Handle fields with enum or examples (dropdown options)
+        const dropdownOptions = actualSchema?.enum || actualSchema?.examples;
+        if (dropdownOptions && dropdownOptions.length > 0) {
             // Use friendly display names for language and voice fields
             const getDisplayName = (value: string) => {
                 if (field === "language") {
@@ -504,7 +507,7 @@ export default function ServiceConfiguration() {
                         <SelectValue placeholder={`Select ${field}`} />
                     </SelectTrigger>
                     <SelectContent>
-                        {actualSchema.enum.map((value: string) => (
+                        {dropdownOptions.map((value: string) => (
                             <SelectItem key={value} value={value}>
                                 {getDisplayName(value)}
                             </SelectItem>

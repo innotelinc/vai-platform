@@ -95,8 +95,21 @@ def register_stt(cls: Type[BaseSTTConfiguration]):
 ###################################################### LLM ########################################################################
 
 # Suggested models for each provider (used for UI dropdown)
-OPENAI_MODELS = ["gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-3.5-turbo"]
-GOOGLE_MODELS = ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.5-flash", "gemini-2.5-flash-lite"]
+OPENAI_MODELS = [
+    "gpt-4.1",
+    "gpt-4.1-mini",
+    "gpt-4.1-nano",
+    "gpt-5",
+    "gpt-5-mini",
+    "gpt-5-nano",
+    "gpt-3.5-turbo",
+]
+GOOGLE_MODELS = [
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-lite",
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+]
 GROQ_MODELS = [
     "llama-3.3-70b-versatile",
     "deepseek-r1-distill-llama-70b",
@@ -121,21 +134,27 @@ class OpenAILLMService(BaseLLMConfiguration):
 @register_llm
 class GoogleLLMService(BaseLLMConfiguration):
     provider: Literal[ServiceProviders.GOOGLE] = ServiceProviders.GOOGLE
-    model: str = Field(default="gemini-2.0-flash", json_schema_extra={"examples": GOOGLE_MODELS})
+    model: str = Field(
+        default="gemini-2.0-flash", json_schema_extra={"examples": GOOGLE_MODELS}
+    )
     api_key: str
 
 
 @register_llm
 class GroqLLMService(BaseLLMConfiguration):
     provider: Literal[ServiceProviders.GROQ] = ServiceProviders.GROQ
-    model: str = Field(default="llama-3.3-70b-versatile", json_schema_extra={"examples": GROQ_MODELS})
+    model: str = Field(
+        default="llama-3.3-70b-versatile", json_schema_extra={"examples": GROQ_MODELS}
+    )
     api_key: str
 
 
 @register_llm
 class AzureLLMService(BaseLLMConfiguration):
     provider: Literal[ServiceProviders.AZURE] = ServiceProviders.AZURE
-    model: str = Field(default="gpt-4.1-mini", json_schema_extra={"examples": AZURE_MODELS})
+    model: str = Field(
+        default="gpt-4.1-mini", json_schema_extra={"examples": AZURE_MODELS}
+    )
     api_key: str
     endpoint: str
 
@@ -143,7 +162,9 @@ class AzureLLMService(BaseLLMConfiguration):
 @register_llm
 class DograhLLMService(BaseLLMConfiguration):
     provider: Literal[ServiceProviders.DOGRAH] = ServiceProviders.DOGRAH
-    model: str = Field(default="default", json_schema_extra={"examples": DOGRAH_LLM_MODELS})
+    model: str = Field(
+        default="default", json_schema_extra={"examples": DOGRAH_LLM_MODELS}
+    )
     api_key: str
 
 
@@ -181,8 +202,7 @@ class DeepgramTTSConfiguration(BaseServiceConfiguration):
             return "aura-2"
 
 
-class ElevenlabsModel(str, Enum):
-    FLASH_2 = "eleven_flash_v2_5"
+ELEVENLABS_TTS_MODELS = ["eleven_flash_v2_5"]
 
 
 @register_tts
@@ -190,72 +210,63 @@ class ElevenlabsTTSConfiguration(BaseServiceConfiguration):
     provider: Literal[ServiceProviders.ELEVENLABS] = ServiceProviders.ELEVENLABS
     voice: str = "21m00Tcm4TlvDq8ikWAM"  # Rachel voice ID
     speed: float = Field(default=1.0, ge=0.1, le=2.0, description="Speed of the voice")
-    model: ElevenlabsModel = ElevenlabsModel.FLASH_2
+    model: str = Field(
+        default="eleven_flash_v2_5",
+        json_schema_extra={"examples": ELEVENLABS_TTS_MODELS},
+    )
     api_key: str
 
 
-class OpenAITTSModel(str, Enum):
-    GPT_4o_MINI = "gpt-4o-mini-tts"
+OPENAI_TTS_MODELS = ["gpt-4o-mini-tts"]
 
 
 @register_tts
 class OpenAITTSService(BaseTTSConfiguration):
     provider: Literal[ServiceProviders.OPENAI] = ServiceProviders.OPENAI
-    model: OpenAITTSModel = OpenAITTSModel.GPT_4o_MINI
+    model: str = Field(
+        default="gpt-4o-mini-tts", json_schema_extra={"examples": OPENAI_TTS_MODELS}
+    )
     voice: str = "alloy"
     api_key: str
 
 
-class DograhTTSModel(str, Enum):
-    DEFAULT = "default"
+DOGRAH_TTS_MODELS = ["default"]
 
 
 @register_tts
 class DograhTTSService(BaseTTSConfiguration):
     provider: Literal[ServiceProviders.DOGRAH] = ServiceProviders.DOGRAH
-    model: DograhTTSModel = DograhTTSModel.DEFAULT
+    model: str = Field(
+        default="default", json_schema_extra={"examples": DOGRAH_TTS_MODELS}
+    )
     voice: str = "default"
     api_key: str
 
 
-class SarvamTTSModel(str, Enum):
-    BULBUL_V2 = "bulbul:v2"
-    BULBUL_V3 = "bulbul:v3"
-
-
-class SarvamVoice(str, Enum):
-    # Female voices
-    ANUSHKA = "anushka"
-    MANISHA = "manisha"
-    VIDYA = "vidya"
-    ARYA = "arya"
-    # Male voices
-    ABHILASH = "abhilash"
-    KARUN = "karun"
-    HITESH = "hitesh"
-
-
-class SarvamLanguage(str, Enum):
-    BENGALI = "bn-IN"
-    ENGLISH_INDIA = "en-IN"
-    GUJARATI = "gu-IN"
-    HINDI = "hi-IN"
-    KANNADA = "kn-IN"
-    MALAYALAM = "ml-IN"
-    MARATHI = "mr-IN"
-    ODIA = "od-IN"
-    PUNJABI = "pa-IN"
-    TAMIL = "ta-IN"
-    TELUGU = "te-IN"
-    ASSAMESE = "as-IN"
+SARVAM_TTS_MODELS = ["bulbul:v2", "bulbul:v3"]
+SARVAM_VOICES = ["anushka", "manisha", "vidya", "arya", "abhilash", "karun", "hitesh"]
+SARVAM_LANGUAGES = [
+    "bn-IN",
+    "en-IN",
+    "gu-IN",
+    "hi-IN",
+    "kn-IN",
+    "ml-IN",
+    "mr-IN",
+    "od-IN",
+    "pa-IN",
+    "ta-IN",
+    "te-IN",
+    "as-IN",
+]
 
 
 # @register_tts
 # class SarvamTTSConfiguration(BaseTTSConfiguration):
 #     provider: Literal[ServiceProviders.SARVAM] = ServiceProviders.SARVAM
-#     model: SarvamTTSModel = SarvamTTSModel.BULBUL_V2
-#     voice: SarvamVoice = SarvamVoice.ANUSHKA
-#     language: SarvamLanguage = SarvamLanguage.HINDI
+#     model: str = Field(default="bulbul:v2", json_schema_extra={"examples": SARVAM_TTS_MODELS})
+#     voice: str = Field(default="anushka", json_schema_extra={"examples": SARVAM_VOICES})
+#     language: str = Field(default="hi-IN", json_schema_extra={"examples": SARVAM_LANGUAGES})
 #     api_key: str
 
 
@@ -273,49 +284,51 @@ TTSConfig = Annotated[
 ###################################################### STT ########################################################################
 
 
-class DeepgramSTTModel(str, Enum):
-    NOVA_3_GENERAL = "nova-3-general"
-
-
-class DeepgramLanguage(str, Enum):
-    MULTI = "multi"
-    ENGLISH = "en"
-    ENGLISH_US = "en-US"
-    ENGLISH_GB = "en-GB"
-    ENGLISH_AU = "en-AU"
-    ENGLISH_IN = "en-IN"
-    SPANISH = "es"
-    SPANISH_LATAM = "es-419"
-    FRENCH = "fr"
-    FRENCH_CA = "fr-CA"
-    GERMAN = "de"
-    ITALIAN = "it"
-    PORTUGUESE = "pt"
-    PORTUGUESE_BR = "pt-BR"
-    DUTCH = "nl"
-    HINDI = "hi"
-    JAPANESE = "ja"
-    KOREAN = "ko"
-    CHINESE_SIMPLIFIED = "zh-CN"
-    CHINESE_TRADITIONAL = "zh-TW"
-    RUSSIAN = "ru"
-    POLISH = "pl"
-    TURKISH = "tr"
-    UKRAINIAN = "uk"
-    VIETNAMESE = "vi"
-    SWEDISH = "sv"
-    DANISH = "da"
-    NORWEGIAN = "no"
-    FINNISH = "fi"
-    INDONESIAN = "id"
-    THAI = "th"
+DEEPGRAM_STT_MODELS = ["nova-3-general"]
+DEEPGRAM_LANGUAGES = [
+    "multi",
+    "en",
+    "en-US",
+    "en-GB",
+    "en-AU",
+    "en-IN",
+    "es",
+    "es-419",
+    "fr",
+    "fr-CA",
+    "de",
+    "it",
+    "pt",
+    "pt-BR",
+    "nl",
+    "hi",
+    "ja",
+    "ko",
+    "zh-CN",
+    "zh-TW",
+    "ru",
+    "pl",
+    "tr",
+    "uk",
+    "vi",
+    "sv",
+    "da",
+    "no",
+    "fi",
+    "id",
+    "th",
+]
 
 
 @register_stt
 class DeepgramSTTConfiguration(BaseSTTConfiguration):
     provider: Literal[ServiceProviders.DEEPGRAM] = ServiceProviders.DEEPGRAM
-    model: DeepgramSTTModel = DeepgramSTTModel.NOVA_3_GENERAL
-    language: DeepgramLanguage = DeepgramLanguage.MULTI
+    model: str = Field(
+        default="nova-3-general", json_schema_extra={"examples": DEEPGRAM_STT_MODELS}
+    )
+    language: str = Field(
+        default="multi", json_schema_extra={"examples": DEEPGRAM_LANGUAGES}
+    )
     api_key: str
 
 
@@ -325,40 +338,40 @@ class CartesiaSTTConfiguration(BaseSTTConfiguration):
     api_key: str
 
 
-class OpenAISTTModel(str, Enum):
-    GPT_4o_TRANSCRIBE = "gpt-4o-transcribe"
+OPENAI_STT_MODELS = ["gpt-4o-transcribe"]
 
 
 @register_stt
 class OpenAISTTConfiguration(BaseSTTConfiguration):
     provider: Literal[ServiceProviders.OPENAI] = ServiceProviders.OPENAI
-    model: OpenAISTTModel = OpenAISTTModel.GPT_4o_TRANSCRIBE
+    model: str = Field(
+        default="gpt-4o-transcribe", json_schema_extra={"examples": OPENAI_STT_MODELS}
+    )
     api_key: str
 
 
 # Dograh STT Service
-class DograhSTTModel(str, Enum):
-    DEFAULT = "default"
+DOGRAH_STT_MODELS = ["default"]
 
 
 @register_stt
 class DograhSTTService(BaseSTTConfiguration):
     provider: Literal[ServiceProviders.DOGRAH] = ServiceProviders.DOGRAH
-    model: DograhSTTModel = DograhSTTModel.DEFAULT
+    model: str = Field(
+        default="default", json_schema_extra={"examples": DOGRAH_STT_MODELS}
+    )
     api_key: str
 
 
 # Sarvam STT Service
-class SarvamSTTModel(str, Enum):
-    SAARIKA_V2_5 = "saarika:v2.5"
-    SAARAS_V2 = "saaras:v2"  # STT-Translate model (auto-detects language)
+SARVAM_STT_MODELS = ["saarika:v2.5", "saaras:v2"]
 
 
 # @register_stt
 # class SarvamSTTConfiguration(BaseSTTConfiguration):
 #     provider: Literal[ServiceProviders.SARVAM] = ServiceProviders.SARVAM
-#     model: SarvamSTTModel = SarvamSTTModel.SAARIKA_V2_5
-#     language: SarvamLanguage = SarvamLanguage.HINDI
+#     model: str = Field(default="saarika:v2.5", json_schema_extra={"examples": SARVAM_STT_MODELS})
+#     language: str = Field(default="hi-IN", json_schema_extra={"examples": SARVAM_LANGUAGES})
 #     api_key: str
 
 
