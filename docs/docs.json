@@ -67,6 +67,7 @@
               "deployment/introduction",
               "deployment/docker",
               "deployment/custom-domain",
+              "deployment/web-widget",
               "deployment/heroku"
             ]
           },
