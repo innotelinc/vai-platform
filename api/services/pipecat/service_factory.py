@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
+from loguru import logger
 
 from api.constants import MPS_API_URL
 from api.services.configuration.registry import ServiceProviders
@@ -32,8 +33,12 @@ def create_stt_service(user_config):
         # Use language from user config, defaulting to "multi" for multilingual support
         language = getattr(user_config.stt, "language", None) or "multi"
         live_options = LiveOptions(
-            language=language, profanity_filter=False, endpointing=100
+            language=language,
+            profanity_filter=False,
+            endpointing=100,
+            model=user_config.stt.model,
         )
+        logger.debug(f"Using DeepGram Model - {user_config.stt.model}")
         return DeepgramSTTService(
             live_options=live_options,
             api_key=user_config.stt.api_key,

@@ -1,6 +1,6 @@
 'use client';
 
-import { FileText, Video } from 'lucide-react';
+import { Check, Copy, FileText, Video } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -23,6 +23,47 @@ interface WorkflowRunResponse {
     recording_url: string | null;
     initial_context: Record<string, string | number | boolean | object> | null;
     gathered_context: Record<string, string | number | boolean | object> | null;
+}
+
+function ContextDisplay({ title, context }: { title: string; context: Record<string, string | number | boolean | object> | null }) {
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = () => {
+        if (!context) return;
+        navigator.clipboard.writeText(JSON.stringify(context, null, 2));
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    if (!context || Object.keys(context).length === 0) {
+        return (
+            <Card className="border-border">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-lg">{title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-sm text-muted-foreground">No data available</p>
+                </CardContent>
+            </Card>
+        );
+    }
+
+    return (
+        <Card className="border-border">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-lg">{title}</CardTitle>
+                <Button variant="ghost" size="sm" onClick={handleCopy} className="gap-2">
+                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    {copied ? 'Copied' : 'Copy'}
+                </Button>
+            </CardHeader>
+            <CardContent>
+                <pre className="text-sm bg-muted p-3 rounded-md overflow-auto max-h-64">
+                    {JSON.stringify(context, null, 2)}
+                </pre>
+            </CardContent>
+        </Card>
+    );
 }
 
 
@@ -174,7 +215,7 @@ export default function WorkflowRunPage() {
                         </CardContent>
                     </Card>
 
-                    {/* <div className="grid gap-6 md:grid-cols-2">
+                    <div className="grid gap-6 md:grid-cols-2">
                         <ContextDisplay
                             title="Initial Context"
                             context={workflowRun?.initial_context}
@@ -183,7 +224,7 @@ export default function WorkflowRunPage() {
                             title="Gathered Context"
                             context={workflowRun?.gathered_context}
                         />
-                    </div> */}
+                    </div>
                 </div>
             </div>
         );
