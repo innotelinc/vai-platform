@@ -1,6 +1,6 @@
 import { NodeProps, NodeToolbar, Position } from "@xyflow/react";
 import { Edit, Headset, Trash2Icon } from "lucide-react";
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 
 import { useWorkflow } from "@/app/workflow/[workflowId]/contexts/WorkflowContext";
 import { FlowNodeData } from "@/components/flow/types";
@@ -32,6 +32,14 @@ export const GlobalNode = memo(({ data, selected, id }: GlobalNodeProps) => {
     // Form state
     const [prompt, setPrompt] = useState(data.prompt);
     const [name, setName] = useState(data.name);
+
+    // Compute if form has unsaved changes (simplified: only check prompt, name)
+    const isDirty = useMemo(() => {
+        return (
+            prompt !== (data.prompt ?? "") ||
+            name !== (data.name ?? "")
+        );
+    }, [prompt, name, data]);
 
     const handleSave = async () => {
         handleSaveNodeData({
@@ -99,6 +107,7 @@ export const GlobalNode = memo(({ data, selected, id }: GlobalNodeProps) => {
                 nodeData={data}
                 title="Edit Global Node"
                 onSave={handleSave}
+                isDirty={isDirty}
             >
                 {open && (
                     <GlobalNodeEditForm

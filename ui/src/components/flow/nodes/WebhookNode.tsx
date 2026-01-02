@@ -1,6 +1,6 @@
 import { NodeProps, NodeToolbar, Position } from "@xyflow/react";
 import { Circle, Edit, Link2, Trash2Icon } from "lucide-react";
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 
 import { useWorkflow } from "@/app/workflow/[workflowId]/contexts/WorkflowContext";
 import { FlowNodeData } from "@/components/flow/types";
@@ -46,6 +46,14 @@ export const WebhookNode = memo(({ data, selected, id }: WebhookNodeProps) => {
     // Validation state - only shown on save attempt
     const [jsonError, setJsonError] = useState<string | null>(null);
     const [endpointError, setEndpointError] = useState<string | null>(null);
+
+    // Compute if form has unsaved changes (simplified: only check name, endpoint)
+    const isDirty = useMemo(() => {
+        return (
+            name !== (data.name || "Webhook") ||
+            endpointUrl !== (data.endpoint_url || "")
+        );
+    }, [name, endpointUrl, data]);
 
     const handleSave = async () => {
         // Validate endpoint URL
@@ -168,6 +176,7 @@ export const WebhookNode = memo(({ data, selected, id }: WebhookNodeProps) => {
                 title="Edit Webhook"
                 onSave={handleSave}
                 error={endpointError || jsonError}
+                isDirty={isDirty}
             >
                 {open && (
                     <WebhookNodeEditForm

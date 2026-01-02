@@ -1,6 +1,6 @@
 import { NodeProps, NodeToolbar, Position } from "@xyflow/react";
 import { Edit, OctagonX, PlusIcon, Trash2Icon } from "lucide-react";
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 
 import { useWorkflow } from "@/app/workflow/[workflowId]/contexts/WorkflowContext";
 import { ExtractionVariable, FlowNodeData } from "@/components/flow/types";
@@ -50,6 +50,14 @@ export const EndCall = memo(({ data, selected, id }: EndCallNodeProps) => {
     const [extractionPrompt, setExtractionPrompt] = useState(data.extraction_prompt ?? "");
     const [variables, setVariables] = useState<ExtractionVariable[]>(data.extraction_variables ?? []);
     const [addGlobalPrompt, setAddGlobalPrompt] = useState(data.add_global_prompt ?? true);
+
+    // Compute if form has unsaved changes (simplified: only check prompt, name)
+    const isDirty = useMemo(() => {
+        return (
+            prompt !== (data.prompt ?? "") ||
+            name !== (data.name ?? "")
+        );
+    }, [prompt, name, data]);
 
     const handleSave = async () => {
         handleSaveNodeData({
@@ -125,6 +133,7 @@ export const EndCall = memo(({ data, selected, id }: EndCallNodeProps) => {
                 nodeData={data}
                 title="End Call"
                 onSave={handleSave}
+                isDirty={isDirty}
             >
                 {open && (
                     <EndCallEditForm

@@ -1,7 +1,17 @@
 import { AlertCircle } from "lucide-react";
-import { ReactNode } from "react";
+import { ReactNode, useCallback, useEffect, useState } from "react";
 
 import { FlowNodeData } from "@/components/flow/types";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -13,6 +23,7 @@ interface NodeEditDialogProps {
     children: ReactNode;
     onSave?: () => void;
     error?: string | null;
+    isDirty?: boolean;
 }
 
 export const NodeEditDialog = ({
@@ -22,18 +33,52 @@ export const NodeEditDialog = ({
     title,
     children,
     onSave,
-    error
+    error,
+    isDirty = false
 }: NodeEditDialogProps) => {
+    const [showDiscardAlert, setShowDiscardAlert] = useState(false);
+
     const handleClose = () => onOpenChange(false);
 
-    const handleSave = () => {
+    const handleSave = useCallback(() => {
         if (onSave) {
             onSave();
         }
-    };
+    }, [onSave]);
+
+    // Intercept dialog close attempts when dirty
+    const handleOpenChange = useCallback((newOpen: boolean) => {
+        // If trying to close and form is dirty, show confirmation
+        if (!newOpen && isDirty) {
+            setShowDiscardAlert(true);
+            return;
+        }
+        onOpenChange(newOpen);
+    }, [isDirty, onOpenChange]);
+
+    // Handle confirmed discard
+    const handleConfirmDiscard = useCallback(() => {
+        setShowDiscardAlert(false);
+        onOpenChange(false);
+    }, [onOpenChange]);
+
+    // Handle Cmd+S / Ctrl+S keyboard shortcut to save
+    useEffect(() => {
+        if (!open) return;
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+                e.preventDefault();
+                handleSave();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [open, handleSave]);
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogContent
                 className="max-h-[85vh] overflow-y-auto"
                 style={{ maxWidth: "1200px", width: "95vw" }}
@@ -61,11 +106,37 @@ export const NodeEditDialog = ({
                 )}
                 <DialogFooter>
                     <div className="flex items-center gap-2">
-                        <Button variant="outline" onClick={handleClose}>Cancel</Button>
+                        <Button
+                            variant="outline"
+                            onClick={isDirty ? () => setShowDiscardAlert(true) : handleClose}
+                        >
+                            Cancel
+                        </Button>
                         <Button onClick={handleSave}>Save</Button>
                     </div>
                 </DialogFooter>
             </DialogContent>
+
+            {/* Discard changes confirmation dialog */}
+            <AlertDialog open={showDiscardAlert} onOpenChange={setShowDiscardAlert}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Discard changes?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            You have unsaved changes. Are you sure you want to discard them?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Keep Editing</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleConfirmDiscard}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                            Discard
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </Dialog>
     );
 };

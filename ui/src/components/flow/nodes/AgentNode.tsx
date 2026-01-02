@@ -1,6 +1,6 @@
 import { NodeProps, NodeToolbar, Position } from "@xyflow/react";
 import { Edit, Headset, PlusIcon, Trash2Icon, Wrench } from "lucide-react";
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 
 import { useWorkflow } from "@/app/workflow/[workflowId]/contexts/WorkflowContext";
 import { ToolBadges } from "@/components/flow/ToolBadges";
@@ -55,6 +55,14 @@ export const AgentNode = memo(({ data, selected, id }: AgentNodeProps) => {
     const [variables, setVariables] = useState<ExtractionVariable[]>(data.extraction_variables ?? []);
     const [addGlobalPrompt, setAddGlobalPrompt] = useState(data.add_global_prompt ?? true);
     const [toolUuids, setToolUuids] = useState<string[]>(data.tool_uuids ?? []);
+
+    // Compute if form has unsaved changes (only check prompt, name)
+    const isDirty = useMemo(() => {
+        return (
+            prompt !== (data.prompt ?? "") ||
+            name !== (data.name ?? "")
+        );
+    }, [prompt, name, data]);
 
     const handleSave = async () => {
         handleSaveNodeData({
@@ -150,6 +158,7 @@ export const AgentNode = memo(({ data, selected, id }: AgentNodeProps) => {
                 nodeData={data}
                 title="Edit Agent"
                 onSave={handleSave}
+                isDirty={isDirty}
             >
                 {open && (
                     <AgentNodeEditForm

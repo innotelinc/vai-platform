@@ -1,7 +1,7 @@
 import { NodeProps, NodeToolbar, Position } from "@xyflow/react";
 import { Check, Copy, Edit, Trash2Icon, Webhook } from "lucide-react";
 import Link from "next/link";
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 
 import { useWorkflow } from "@/app/workflow/[workflowId]/contexts/WorkflowContext";
 import { FlowNodeData } from "@/components/flow/types";
@@ -39,6 +39,11 @@ export const TriggerNode = memo(({ data, selected, id }: TriggerNodeProps) => {
 
     // Copy state for button feedback
     const [copied, setCopied] = useState(false);
+
+    // Compute if form has unsaved changes (simplified: only check name)
+    const isDirty = useMemo(() => {
+        return name !== (data.name || "API Trigger");
+    }, [name, data.name]);
 
     const handleCopy = async () => {
         await navigator.clipboard.writeText(endpoint);
@@ -137,6 +142,7 @@ export const TriggerNode = memo(({ data, selected, id }: TriggerNodeProps) => {
                 nodeData={data}
                 title="Edit API Trigger"
                 onSave={handleSave}
+                isDirty={isDirty}
             >
                 {open && (
                     <TriggerNodeEditForm

@@ -1,6 +1,6 @@
 import { NodeProps, NodeToolbar, Position } from "@xyflow/react";
 import { Edit, Play, Wrench } from "lucide-react";
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 
 import { useWorkflow } from "@/app/workflow/[workflowId]/contexts/WorkflowContext";
 import { ToolBadges } from "@/components/flow/ToolBadges";
@@ -57,6 +57,14 @@ export const StartCall = memo(({ data, selected, id }: StartCallNodeProps) => {
     const [delayedStart, setDelayedStart] = useState(data.delayed_start ?? false);
     const [delayedStartDuration, setDelayedStartDuration] = useState(data.delayed_start_duration ?? 2);
     const [toolUuids, setToolUuids] = useState<string[]>(data.tool_uuids ?? []);
+
+    // Compute if form has unsaved changes (only check prompt, name)
+    const isDirty = useMemo(() => {
+        return (
+            prompt !== (data.prompt ?? "") ||
+            name !== (data.name ?? "")
+        );
+    }, [prompt, name, data]);
 
     const handleSave = async () => {
         handleSaveNodeData({
@@ -146,6 +154,7 @@ export const StartCall = memo(({ data, selected, id }: StartCallNodeProps) => {
                 nodeData={data}
                 title="Start Call"
                 onSave={handleSave}
+                isDirty={isDirty}
             >
                 {open && (
                     <StartCallEditForm
