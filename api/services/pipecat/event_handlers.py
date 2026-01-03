@@ -109,6 +109,13 @@ def register_task_event_handler(
 
         gathered_context = await engine.get_gathered_context()
 
+        # Add trace URL if available (must be done before conversation tracing ends)
+        if task.turn_trace_observer:
+            trace_url = task.turn_trace_observer.get_trace_url()
+            if trace_url:
+                gathered_context["trace_url"] = trace_url
+                logger.debug(f"Added trace URL to gathered_context: {trace_url}")
+
         # also consider existing gathered context in workflow_run
         gathered_context = {**gathered_context, **workflow_run.gathered_context}
 

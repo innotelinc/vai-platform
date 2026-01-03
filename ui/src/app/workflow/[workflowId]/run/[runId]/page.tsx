@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, Copy, FileText, Video } from 'lucide-react';
+import { Check, Copy, ExternalLink, FileText, Video } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -211,6 +211,26 @@ export default function WorkflowRunPage() {
                                         Recording
                                     </Button>
                                 </div>
+                                {workflowRun?.gathered_context?.trace_url && (
+                                    <div className="flex items-center gap-2 border-l border-border pl-4">
+                                        <span className="text-sm text-muted-foreground">Trace:</span>
+                                        <Button
+                                            asChild
+                                            size="sm"
+                                            variant="outline"
+                                            className="gap-2"
+                                        >
+                                            <a
+                                                href={String(workflowRun.gathered_context.trace_url)}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                            >
+                                                <ExternalLink className="h-4 w-4" />
+                                                View Trace
+                                            </a>
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
                         </CardContent>
                     </Card>

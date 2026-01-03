@@ -367,7 +367,7 @@ export type HttpApiConfig = {
      */
     method: string;
     /**
-     * Target URL (supports {{variable}} placeholders)
+     * Target URL
      */
     url: string;
     /**
@@ -381,27 +381,13 @@ export type HttpApiConfig = {
      */
     credential_uuid?: string | null;
     /**
-     * Request body with {{variable}} placeholders
+     * Parameters that the tool accepts from LLM
      */
-    body_template?: {
-        [key: string]: unknown;
-    } | null;
+    parameters?: Array<ToolParameter> | null;
     /**
      * Request timeout in milliseconds
      */
     timeout_ms?: number | null;
-    /**
-     * Retry configuration
-     */
-    retry_config?: {
-        [key: string]: unknown;
-    } | null;
-    /**
-     * JSONPath mappings for response extraction
-     */
-    response_mapping?: {
-        [key: string]: string;
-    } | null;
 };
 
 /**
@@ -612,6 +598,28 @@ export type ToolDefinition = {
      * Tool configuration
      */
     config: HttpApiConfig;
+};
+
+/**
+ * A parameter that the tool accepts.
+ */
+export type ToolParameter = {
+    /**
+     * Parameter name (used as key in request body)
+     */
+    name: string;
+    /**
+     * Parameter type: string, number, or boolean
+     */
+    type: string;
+    /**
+     * Description of what this parameter is for
+     */
+    description: string;
+    /**
+     * Whether this parameter is required
+     */
+    required?: boolean;
 };
 
 /**
