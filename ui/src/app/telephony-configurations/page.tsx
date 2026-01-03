@@ -213,10 +213,10 @@ export default function ConfigureTelephonyPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-2">Configure Telephony</h1>
-        <p className="text-gray-600 mb-6">
+        <p className="text-muted-foreground mb-6">
           Set up your telephony provider to make phone calls
         </p>
 
@@ -299,7 +299,7 @@ export default function ConfigureTelephonyPage() {
                   <div className="space-y-4 text-sm">
                     <div>
                       <h4 className="font-semibold mb-2">Getting Started with Vobiz:</h4>
-                      <ol className="list-decimal list-inside space-y-1 text-gray-600">
+                      <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
                         <li>Sign up for a Vobiz account</li>
                         <li>Get your Auth ID from the Vobiz dashboard</li>
                         <li>Generate an Auth Token</li>
@@ -307,8 +307,8 @@ export default function ConfigureTelephonyPage() {
                         <li>Enter your credentials below</li>
                       </ol>
                     </div>
-                    <div className="bg-blue-50 border border-blue-200 rounded p-3">
-                      <p className="text-sm text-blue-800">
+                    <div className="bg-muted border border-border rounded p-3">
+                      <p className="text-sm">
                         <strong>Note:</strong> Vobiz provides cloud-based telephony services
                         with global reach and competitive pricing.
                       </p>
@@ -318,15 +318,15 @@ export default function ConfigureTelephonyPage() {
                   <div className="space-y-4 text-sm">
                     <div>
                       <h4 className="font-semibold mb-2">Getting Started with Cloudonix:</h4>
-                      <ol className="list-decimal list-inside space-y-1 text-gray-600">
+                      <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
                         <li>Sign up for a Cloudonix account at https://cloudonix.com</li>
                         <li>Create an <i>API token</i> for your Cloudonix domain</li>
                         <li>Configure your Cloudoinx <i>API Token</i> and <i>Cloudonix Domain Name</i> in Dograh</li>
                         <li>Configure an optional outbound phone number for your Dograh agent</li>
                       </ol>
                     </div>
-                    <div className="bg-blue-50 border border-blue-200 rounded p-3">
-                      <p className="text-sm text-blue-800">
+                    <div className="bg-muted border border-border rounded p-3">
+                      <p className="text-sm">
                         <strong>Note:</strong> Cloudonix uses Bearer token
                         authentication and is fully TwiML-compatible for voice
                         applications.
@@ -462,7 +462,7 @@ export default function ConfigureTelephonyPage() {
                         <Label htmlFor="private_key">Private Key</Label>
                         <textarea
                           id="private_key"
-                          className="w-full min-h-[100px] px-3 py-2 text-sm border rounded-md"
+                          className="w-full min-h-[100px] px-3 py-2 text-sm border border-input bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
                           placeholder="-----BEGIN PRIVATE KEY-----&#10;...&#10;-----END PRIVATE KEY-----"
                           {...register("private_key", {
                             required: selectedProvider === "vonage" && !hasExistingConfig
@@ -655,7 +655,7 @@ export default function ConfigureTelephonyPage() {
                             {errors.from_number.message}
                           </p>
                         )}
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-muted-foreground">
                           Phone numbers can be fetched from Cloudonix DNIDs if not
                           specified
                         </p>

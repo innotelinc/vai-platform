@@ -1,0 +1,18 @@
+---
+title: "Tracing"
+description: "Trace your agents run in order to create evals and refine your prompts."
+---
+
+### Langfuse
+We provide seamless integration with [Langfuse](https://github.com/langfuse/langfuse) so that you can enable tracing when you self host Dograh. In order to do that, you can sign up on [Langfuse](https://langfuse.com/) and create API credentials for you. Once you have your API tokens, you can put those in the environment variables. (If you are using docker, you can put that in `api` service of `docker-compose.yaml`). 
+
+```
+ENABLE_TRACING="true"
+LANGFUSE_SECRET_KEY=
+LANGFUSE_PUBLIC_KEY=
+LANGFUSE_HOST=
+```
+
+Once you enable this, you would be able to see traces whenever a run completes in Dograh. 
+
+![View Trace](../images/view_trace.png)

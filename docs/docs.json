@@ -33,7 +33,8 @@
               "configurations/llm",
               "configurations/voice",
               "configurations/transcriber",
-              "configurations/api-keys"
+              "configurations/api-keys",
+              "configurations/tracing"
             ]
           },
           {
