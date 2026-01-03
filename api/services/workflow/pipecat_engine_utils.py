@@ -55,13 +55,12 @@ def update_llm_context(
     tools_schema = ToolsSchema(standard_tools=functions)
     previous_interactions = context.messages
 
-    # Filter out old system messages but keep user/assistant/function content.
-    messages: List[Dict[str, Any]] = [system_message]
-    messages.extend(
-        interaction
-        for interaction in previous_interactions
-        if interaction["role"] != "system"
-    )
+    # Replace the first message if it's a system message, otherwise prepend.
+    # Keep any system messages that appear in the middle of the conversation.
+    if previous_interactions and previous_interactions[0]["role"] == "system":
+        messages = [system_message] + previous_interactions[1:]
+    else:
+        messages = [system_message] + previous_interactions
 
     context.set_messages(messages)
 

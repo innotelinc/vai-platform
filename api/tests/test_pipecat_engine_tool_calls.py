@@ -10,18 +10,9 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from api.services.pipecat.pipeline_engine_callbacks_processor import (
-    PipelineEngineCallbacksProcessor,
-)
 from api.services.workflow.pipecat_engine import PipecatEngine
 from api.services.workflow.workflow import WorkflowGraph
-from api.tests.conftest import END_CALL_SYSTEM_PROMPT
-from pipecat.frames.frames import (
-    BotStartedSpeakingFrame,
-    BotStoppedSpeakingFrame,
-    Frame,
-    TextFrame,
-)
+from api.tests.conftest import END_CALL_SYSTEM_PROMPT, MockTransportProcessor
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
@@ -30,33 +21,7 @@ from pipecat.processors.aggregators.llm_response import LLMAssistantAggregatorPa
 from pipecat.processors.aggregators.llm_response_universal import (
     LLMContextAggregatorPair,
 )
-from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
-from pipecat.tests import MockLLMService
-
-
-class MockBotStoppedSpeakingOnLLMTextFrameProcessor(FrameProcessor):
-    """
-    Mocking the transport, where transport sends BotStartedSpeakingFrame
-    and BotStoppedSpeakingFrame when it encounters a LLMTextFrame.
-    """
-
-    async def process_frame(self, frame: Frame, direction: FrameDirection):
-        await super().process_frame(frame, direction)
-
-        if isinstance(frame, TextFrame):
-            await self.push_frame(BotStartedSpeakingFrame())
-            await self.push_frame(
-                BotStartedSpeakingFrame(), direction=FrameDirection.UPSTREAM
-            )
-
-            await asyncio.sleep(0.1)
-
-            await self.push_frame(BotStoppedSpeakingFrame())
-            await self.push_frame(
-                BotStoppedSpeakingFrame(), direction=FrameDirection.UPSTREAM
-            )
-
-        await self.push_frame(frame, direction)
+from pipecat.tests import MockLLMService, MockTTSService
 
 
 async def run_pipeline_with_tool_calls(
@@ -96,7 +61,10 @@ async def run_pipeline_with_tool_calls(
     # Create MockLLMService with multi-step support
     llm = MockLLMService(mock_steps=mock_steps, chunk_delay=0.001)
 
-    mock_transport_emulator = MockBotStoppedSpeakingOnLLMTextFrameProcessor()
+    # Create MockTTSService to generate TTS frames
+    tts = MockTTSService(mock_audio_duration_ms=10, frame_delay=0)
+
+    mock_transport_emulator = MockTransportProcessor(emit_bot_speaking=False)
 
     # Create LLM context
     context = LLMContext()
@@ -117,10 +85,11 @@ async def run_pipeline_with_tool_calls(
         workflow_run_id=1,
     )
 
-    # Create the pipeline with the mock LLM
+    # Create the pipeline with the mock LLM and TTS
     pipeline = Pipeline(
         [
             llm,
+            tts,
             mock_transport_emulator,
             assistant_context_aggregator,
         ]

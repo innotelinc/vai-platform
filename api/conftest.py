@@ -23,7 +23,45 @@ from dotenv import load_dotenv
 env_path = Path(__file__).parent / ".env.test"
 load_dotenv(env_path)
 
+import logging
+import sys
+
+import loguru
 import pytest
+
+
+def setup_test_logging():
+    """Configure logging for tests using LOG_LEVEL from .env.test"""
+    log_level = os.getenv("LOG_LEVEL", "DEBUG").upper()
+
+    # Remove default loguru handler
+    try:
+        loguru.logger.remove(0)
+    except ValueError:
+        pass
+
+    # Add console handler with the configured log level
+    loguru.logger.add(
+        sys.stdout,
+        format="{time:YYYY-MM-DD HH:mm:ss.SSS} | <level>{level}</level> | {file.name}:{line} | {message}",
+        level=log_level,
+        colorize=True,
+    )
+
+    # Intercept standard library logging and redirect to loguru
+    class InterceptHandler(logging.Handler):
+        def emit(self, record):
+            try:
+                level = loguru.logger.level(record.levelname).name
+            except ValueError:
+                level = record.levelno
+            loguru.logger.opt(exception=record.exc_info).log(level, record.getMessage())
+
+    logging.basicConfig(handlers=[InterceptHandler()], level=logging.DEBUG, force=True)
+
+
+# Initialize test logging
+setup_test_logging()
 from sqlalchemy import event, text
 from sqlalchemy.ext.asyncio import (
     AsyncConnection,

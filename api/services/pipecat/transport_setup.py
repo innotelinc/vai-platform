@@ -127,6 +127,7 @@ async def create_twilio_transport(
         ),
     )
 
+
 async def create_cloudonix_transport(
     websocket_client: WebSocket,
     stream_sid: str,
@@ -207,7 +208,7 @@ async def create_cloudonix_transport(
             if ENABLE_RNNOISE
             else None,
         ),
-    )    
+    )
 
 
 async def create_vonage_transport(

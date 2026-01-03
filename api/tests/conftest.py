@@ -14,9 +14,70 @@ from api.services.workflow.dto import (
     RFNodeDTO,
 )
 from api.services.workflow.workflow import WorkflowGraph
+from pipecat.frames.frames import (
+    BotSpeakingFrame,
+    BotStartedSpeakingFrame,
+    BotStoppedSpeakingFrame,
+    Frame,
+    TTSAudioRawFrame,
+    TTSStartedFrame,
+    TTSStoppedFrame,
+)
+from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 
 START_CALL_SYSTEM_PROMPT = "start_call_system_prompt"
 END_CALL_SYSTEM_PROMPT = "end_call_system_prompt"
+
+
+class MockTransportProcessor(FrameProcessor):
+    """
+    Mocks the transport behavior by emitting Bot speaking frames
+    when it encounters TTS frames.
+
+    This simulates what a real transport would do when the bot is speaking:
+    - TTSStartedFrame -> BotStartedSpeakingFrame
+    - TTSAudioRawFrame -> BotSpeakingFrame
+    - TTSStoppedFrame -> BotStoppedSpeakingFrame
+
+    Args:
+        emit_bot_speaking: If True, also emits BotSpeakingFrame on TTSAudioRawFrame
+            which is needed for UserIdleProcessor to start conversation tracking. Default True.
+    """
+
+    def __init__(
+        self,
+        *,
+        emit_bot_speaking: bool = True,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self._emit_bot_speaking = emit_bot_speaking
+
+    async def process_frame(self, frame: Frame, direction: FrameDirection):
+        await super().process_frame(frame, direction)
+
+        if isinstance(frame, TTSStartedFrame):
+            # Emit BotStartedSpeakingFrame to indicate bot started speaking
+            await self.push_frame(BotStartedSpeakingFrame())
+            await self.push_frame(
+                BotStartedSpeakingFrame(), direction=FrameDirection.UPSTREAM
+            )
+        elif isinstance(frame, TTSAudioRawFrame):
+            # Emit BotSpeakingFrame - this is what triggers the UserIdleProcessor
+            # to start conversation tracking
+            if self._emit_bot_speaking:
+                await self.push_frame(BotSpeakingFrame())
+                await self.push_frame(
+                    BotSpeakingFrame(), direction=FrameDirection.UPSTREAM
+                )
+        elif isinstance(frame, TTSStoppedFrame):
+            # Emit BotStoppedSpeakingFrame to indicate bot stopped speaking
+            await self.push_frame(BotStoppedSpeakingFrame())
+            await self.push_frame(
+                BotStoppedSpeakingFrame(), direction=FrameDirection.UPSTREAM
+            )
+
+        await self.push_frame(frame, direction)
 
 
 @dataclass

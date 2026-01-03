@@ -16,9 +16,7 @@ from typing import TYPE_CHECKING, Awaitable, Callable
 from loguru import logger
 
 from pipecat.frames.frames import (
-    LLMFullResponseEndFrame,
-    LLMFullResponseStartFrame,
-    TTSSpeakFrame,
+    LLMMessagesAppendFrame,
 )
 from pipecat.processors.filters.stt_mute_filter import STTMuteFilter
 from pipecat.utils.enums import EndTaskReason
@@ -68,21 +66,18 @@ def create_user_idle_callback(engine: "PipecatEngine"):
         logger.debug(f"Handling user_idle, attempt: {retry_count}")
 
         if retry_count == 1:
-            # Simulate an LLM generation, so that we can have the LLM context
-            # updated with the new message
-            await engine.task.queue_frames(
-                [
-                    LLMFullResponseStartFrame(),
-                    TTSSpeakFrame("Just checking in to see if you're still there."),
-                    LLMFullResponseEndFrame(),
-                ]
-            )
+            message = {
+                "role": "system",
+                "content": "The user has been quiet. Politely and briefly ask if they're still there in the language that the user has been speaking so far.",
+            }
+            await user_idle.push_frame(LLMMessagesAppendFrame([message], run_llm=True))
             return True
 
-        # Second attempt: terminate the call due to inactivity.
-        await user_idle.push_frame(
-            TTSSpeakFrame("It seems like you're busy right now. Have a nice day!")
-        )
+        message = {
+            "role": "system",
+            "content": "The user has been quiet. We will be disconnecting the call now. Wish them a good day.",
+        }
+        await user_idle.push_frame(LLMMessagesAppendFrame([message], run_llm=True))
         await engine.send_end_task_frame(
             EndTaskReason.USER_IDLE_MAX_DURATION_EXCEEDED.value
         )

@@ -13,7 +13,6 @@ from pipecat.frames.frames import (
     CancelFrame,
     EndFrame,
     FunctionCallResultProperties,
-    FunctionCallsFromLLMInfoFrame,
     LLMContextFrame,
     TTSSpeakFrame,
 )

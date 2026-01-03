@@ -270,7 +270,7 @@ class CloudonixProvider(TelephonyProvider):
         Cloudonix embeds CXML directly in the API call during initiate_call(),
         so webhook endpoints are never called and signature verification is not needed.
         This method only exists to satisfy the abstract base class requirement.
-        
+
         Always returns True since no actual webhook verification is performed.
         """
         logger.warning(

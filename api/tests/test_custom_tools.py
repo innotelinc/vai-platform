@@ -920,27 +920,6 @@ class TestUpdateLLMContext:
         assert messages[1]["role"] == "user"
         assert messages[2]["role"] == "assistant"
 
-    def test_removes_multiple_old_system_messages(self):
-        """Test that all old system messages are removed."""
-        context = LLMContext()
-        context.set_messages(
-            [
-                {"role": "system", "content": "First system message"},
-                {"role": "user", "content": "Question 1"},
-                {"role": "system", "content": "Second system message"},
-                {"role": "assistant", "content": "Answer 1"},
-            ]
-        )
-
-        new_system = {"role": "system", "content": "Only system message"}
-        update_llm_context(context, new_system, [])
-
-        messages = context.messages
-        # Should only have one system message now
-        system_messages = [m for m in messages if m["role"] == "system"]
-        assert len(system_messages) == 1
-        assert system_messages[0]["content"] == "Only system message"
-
     def test_preserves_conversation_history(self):
         """Test that user/assistant messages are preserved in order."""
         context = LLMContext()
