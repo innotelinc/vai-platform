@@ -10,6 +10,7 @@ import aiohttp
 from fastapi import HTTPException
 from loguru import logger
 
+from api.db import db_client
 from api.enums import WorkflowRunMode
 from api.services.telephony.base import (
     CallInitiationResult,
@@ -21,6 +22,8 @@ from api.utils.common import get_backend_endpoints
 
 if TYPE_CHECKING:
     from fastapi import WebSocket
+
+CLOUDONIX_API_BASE_URL = "https://api.cloudonix.io"
 
 
 class CloudonixProvider(TelephonyProvider):
@@ -45,7 +48,7 @@ class CloudonixProvider(TelephonyProvider):
                 - from_numbers: List of phone numbers to use (optional, fetched from API if not provided)
         """
         self.bearer_token = config.get("bearer_token")
-        self.domain_id = config.get("domain_id")
+        self.domain_id = self._normalize_domain(config.get("domain_id"))
         self.application_name = config.get("application_name")
         self.from_numbers = config.get("from_numbers", [])
 
@@ -53,7 +56,25 @@ class CloudonixProvider(TelephonyProvider):
         if isinstance(self.from_numbers, str):
             self.from_numbers = [self.from_numbers]
 
-        self.base_url = "https://api.cloudonix.io"
+        self.base_url = CLOUDONIX_API_BASE_URL
+
+    @staticmethod
+    def _normalize_domain(domain: Optional[str]) -> Optional[str]:
+        """Ensure a Cloudonix domain is fully qualified.
+
+        Cloudonix domains are always of the form ``<name>.cloudonix.net``.
+        Users sometimes configure or pass just ``<name>``; normalize so
+        equality checks against stored credentials and API URLs work
+        regardless of input form.
+        """
+        if not domain:
+            return domain
+        domain = domain.strip()
+        if not domain:
+            return domain
+        if domain.endswith(".cloudonix.net"):
+            return domain
+        return f"{domain}.cloudonix.net"
 
     def _get_auth_headers(self) -> Dict[str, str]:
         """Generate authorization headers for Cloudonix API."""
@@ -388,7 +409,6 @@ class CloudonixProvider(TelephonyProvider):
         2. "start" event with streamSid and callSid
         3. Then audio messages
         """
-        from api.db import db_client
         from api.services.pipecat.run_pipeline import run_pipeline_telephony
 
         try:
@@ -453,6 +473,163 @@ class CloudonixProvider(TelephonyProvider):
             logger.error(f"Error in Cloudonix WebSocket handler: {e}")
             raise
 
+    async def handle_external_websocket(
+        self,
+        websocket: "WebSocket",
+        *,
+        organization_id: int,
+        workflow_id: int,
+        user_id: int,
+        workflow_run_id: int,
+        params: Dict[str, str],
+    ) -> None:
+        """Agent-stream entry point.
+
+        ``Domain`` (domain id) is read from the query string. The bearer
+        token comes from the stored Cloudonix telephony configuration
+        matched by ``domain_id`` within the workflow's organization — never
+        from the URL or stream payload. The websocket handshake (connected
+        / start) is identical to the standard inbound flow.
+
+        Before starting the pipeline we (a) require an existing Cloudonix
+        telephony configuration for the supplied ``domain_id`` and (b)
+        validate the call session with Cloudonix using the bearer token
+        from that configuration. Either failure closes the socket with
+        4400.
+        """
+        from api.services.pipecat.run_pipeline import run_pipeline_telephony
+
+        domain_id = self._normalize_domain(params.get("Domain"))
+        if not domain_id:
+            logger.error("Cloudonix agent-stream missing required param: Domain")
+            await websocket.close(code=4400, reason="Missing Domain query param")
+            return
+
+        config = await self._find_config_by_domain(organization_id, domain_id)
+        if not config:
+            logger.error(
+                f"Cloudonix agent-stream: no telephony configuration found "
+                f"for domain_id={domain_id}"
+            )
+            await websocket.close(
+                code=4400, reason=f"Unknown Cloudonix domain: {domain_id}"
+            )
+            return
+
+        bearer_token = (config.credentials or {}).get("bearer_token")
+        if not bearer_token:
+            logger.error(
+                f"Cloudonix agent-stream: telephony configuration {config.id} "
+                f"is missing bearer_token in credentials"
+            )
+            await websocket.close(
+                code=4400, reason="Cloudonix configuration missing bearer_token"
+            )
+            return
+
+        try:
+            first_msg = await websocket.receive_text()
+            msg = json.loads(first_msg)
+            if msg.get("event") != "connected":
+                logger.error(f"Expected 'connected' event, got: {msg.get('event')}")
+                await websocket.close(code=4400, reason="Expected connected event")
+                return
+
+            start_msg = json.loads(await websocket.receive_text())
+            if start_msg.get("event") != "start":
+                logger.error("Expected 'start' event second")
+                await websocket.close(code=4400, reason="Expected start event")
+                return
+
+            try:
+                stream_sid = start_msg["start"]["streamSid"]
+                call_sid = start_msg["start"]["callSid"]
+            except KeyError:
+                logger.error("Missing streamSid or callSid in start message")
+                await websocket.close(code=4400, reason="Missing stream identifiers")
+                return
+
+            if not await self._validate_session(domain_id, call_sid, bearer_token):
+                await websocket.close(
+                    code=4400, reason="Cloudonix session validation failed"
+                )
+                return
+
+            logger.info(
+                f"Cloudonix agent-stream connected for workflow_run "
+                f"{workflow_run_id} stream_sid={stream_sid} call_sid={call_sid} "
+                f"telephony_configuration_id={config.id}"
+            )
+
+            await run_pipeline_telephony(
+                websocket,
+                provider_name=self.PROVIDER_NAME,
+                workflow_id=workflow_id,
+                workflow_run_id=workflow_run_id,
+                user_id=user_id,
+                call_id=call_sid,
+                transport_kwargs={
+                    "call_id": call_sid,
+                    "stream_sid": stream_sid,
+                    "bearer_token": bearer_token,
+                    "domain_id": domain_id,
+                },
+            )
+
+        except Exception as e:
+            logger.error(f"Error in Cloudonix agent-stream handler: {e}")
+            raise
+
+    async def _validate_session(
+        self, domain_id: str, call_id: str, bearer_token: str
+    ) -> bool:
+        """Confirm the session is live with Cloudonix.
+
+        Hits ``GET /customers/self/domains/{domain_id}/sessions/{call_id}``
+        with the supplied bearer token. A 200 response means both the
+        token is valid and the session exists.
+        """
+        endpoint = (
+            f"{self.base_url}/customers/self/domains/{domain_id}/sessions/{call_id}"
+        )
+        headers = {
+            "Authorization": f"Bearer {bearer_token}",
+            "Content-Type": "application/json",
+        }
+        try:
+            async with aiohttp.ClientSession() as http:
+                async with http.get(endpoint, headers=headers) as response:
+                    if response.status == 200:
+                        return True
+                    body = await response.text()
+                    logger.error(
+                        f"Cloudonix session validation failed: "
+                        f"HTTP {response.status} domain_id={domain_id} "
+                        f"call_id={call_id} body={body}"
+                    )
+                    return False
+        except Exception as e:
+            logger.error(
+                f"Cloudonix session validation error for domain_id={domain_id} "
+                f"call_id={call_id}: {e}"
+            )
+            return False
+
+    async def _find_config_by_domain(self, organization_id: int, domain_id: str):
+        """Find a Cloudonix config by its normalized ``domain_id`` within
+        ``organization_id`` — scoped lookup so credentials from a different
+        org can never be used."""
+        normalized = self._normalize_domain(domain_id)
+        if not normalized:
+            return None
+        candidates = await db_client.list_telephony_configurations_by_provider(
+            organization_id, self.PROVIDER_NAME
+        )
+        for cand in candidates:
+            if (cand.credentials or {}).get("domain_id") == normalized:
+                return cand
+        return None
+
     # ======== INBOUND CALL METHODS ========
 
     @classmethod
@@ -510,7 +687,9 @@ class CloudonixProvider(TelephonyProvider):
 
         call_id = webhook_data.get("Session") or webhook_data.get("CallSid") or token
 
-        account_id = webhook_data.get("Domain") or webhook_data.get("AccountSid", "")
+        account_id = CloudonixProvider._normalize_domain(
+            webhook_data.get("Domain") or webhook_data.get("AccountSid", "")
+        )
 
         # Extract underlying provider information from SessionData if available
         session_data = webhook_data.get("SessionData", {})
@@ -554,35 +733,9 @@ class CloudonixProvider(TelephonyProvider):
         if not stored_domain:
             return False
 
-        return webhook_account_id == stored_domain
-
-    def normalize_phone_number(self, phone_number: str) -> str:
-        """
-        Normalize a phone number to E.164 format for Cloudonix.
-
-        Cloudonix typically provides numbers in E.164 format already,
-        but we'll ensure proper formatting.
-        """
-        if not phone_number:
-            return ""
-
-        # Remove any spaces or formatting
-        clean_number = (
-            phone_number.replace(" ", "")
-            .replace("-", "")
-            .replace("(", "")
-            .replace(")", "")
-        )
-
-        # If already in E.164 format (+...), return as-is
-        if clean_number.startswith("+"):
-            return clean_number
-
-        # If starts with country code but no +, add it
-        if len(clean_number) >= 10:
-            return f"+{clean_number}"
-
-        return clean_number
+        return CloudonixProvider._normalize_domain(
+            webhook_account_id
+        ) == CloudonixProvider._normalize_domain(stored_domain)
 
     async def verify_inbound_signature(
         self,

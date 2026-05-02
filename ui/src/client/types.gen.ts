@@ -704,9 +704,9 @@ export type CloudonixConfigurationRequest = {
     /**
      * Application Name
      *
-     * Cloudonix Voice Application name. The application's url is updated when inbound workflows are attached to numbers on this domain.
+     * Cloudonix Voice Application name. The application's url is updated when inbound workflows are attached to numbers on this domain. If omitted, an application is auto-created on save and its name is stored on the configuration.
      */
-    application_name: string;
+    application_name?: string | null;
     /**
      * From Numbers
      *
@@ -736,7 +736,7 @@ export type CloudonixConfigurationResponse = {
     /**
      * Application Name
      */
-    application_name: string;
+    application_name?: string | null;
     /**
      * From Numbers
      */
@@ -2392,9 +2392,9 @@ export type PlivoConfigurationRequest = {
     /**
      * Application Id
      *
-     * Plivo Application ID. The application's answer_url is updated when inbound workflows are attached to numbers on this account.
+     * Plivo Application ID. The application's answer_url is updated when inbound workflows are attached to numbers on this account. If omitted, an application is auto-created on save and its id is stored on the configuration.
      */
-    application_id: string;
+    application_id?: string | null;
     /**
      * From Numbers
      *
@@ -2424,7 +2424,7 @@ export type PlivoConfigurationResponse = {
     /**
      * Application Id
      */
-    application_id: string;
+    application_id?: string | null;
     /**
      * From Numbers
      */
@@ -3388,9 +3388,9 @@ export type TelnyxConfigurationRequest = {
     /**
      * Connection Id
      *
-     * Telnyx Call Control Application ID (connection_id)
+     * Telnyx Call Control Application ID (connection_id). If omitted, a Call Control Application is auto-created on save and its id is stored on the configuration.
      */
-    connection_id: string;
+    connection_id?: string | null;
     /**
      * From Numbers
      *
@@ -3416,7 +3416,7 @@ export type TelnyxConfigurationResponse = {
     /**
      * Connection Id
      */
-    connection_id: string;
+    connection_id?: string | null;
     /**
      * From Numbers
      */
@@ -4125,9 +4125,9 @@ export type VobizConfigurationRequest = {
     /**
      * Application Id
      *
-     * Vobiz Application ID. The application's answer_url is updated when inbound workflows are attached to numbers on this account.
+     * Vobiz Application ID. The application's answer_url is updated when inbound workflows are attached to numbers on this account. If omitted, an application is auto-created on save and its id is stored on the configuration.
      */
-    application_id: string;
+    application_id?: string | null;
     /**
      * From Numbers
      *
@@ -4157,7 +4157,7 @@ export type VobizConfigurationResponse = {
     /**
      * Application Id
      */
-    application_id: string;
+    application_id?: string | null;
     /**
      * From Numbers
      */
@@ -4429,6 +4429,10 @@ export type WorkflowResponse = {
      * Version Status
      */
     version_status?: string | null;
+    /**
+     * Workflow Uuid
+     */
+    workflow_uuid?: string | null;
 };
 
 /**
