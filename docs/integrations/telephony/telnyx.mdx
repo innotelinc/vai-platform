@@ -13,7 +13,7 @@ Before setting up Telnyx integration, you'll need:
 
 - A [Telnyx account](https://telnyx.com/)
 - An **API Key** from the Telnyx Mission Control Portal
-- A **Call Control Application** (its `connection_id` is what Dograh stores)
+- A **Call Control Application** (optional — leave the field blank in Dograh and we'll auto-create one for you on save, with the inbound webhook URL pre-set)
 - At least one Telnyx phone number assigned to that Call Control Application
 - Dograh AI instance running and accessible
 
@@ -23,9 +23,8 @@ Before setting up Telnyx integration, you'll need:
 
 1. Log in to the [Telnyx Mission Control Portal](https://portal.telnyx.com/)
 2. Navigate to **API Keys** and create (or copy) an API Key
-3. Navigate to **Call Control** → **Applications** and create (or open) the application you'll use with Dograh
-4. Copy the application's **Connection ID** (Call Control App ID)
-5. Navigate to **Numbers** → **My Numbers** and assign your phone numbers to that Call Control Application
+3. (Optional) Navigate to **Call Control** → **Applications** and create (or open) the application you'll use with Dograh, then copy its **Connection ID** (Call Control App ID). Skip this if you want Dograh to auto-create the Call Control Application for you on save.
+4. Navigate to **Numbers** → **My Numbers** and assign your phone numbers to the Call Control Application you'll use with Dograh (if you're letting Dograh auto-create the application, do this after saving the configuration in Step 2)
 
 ### Step 2: Configure in Dograh AI
 
@@ -33,9 +32,17 @@ Before setting up Telnyx integration, you'll need:
 2. Select **Telnyx** as your provider
 3. Enter your credentials:
    - API Key
-   - Call Control App ID (Connection ID)
+   - Call Control App ID (Connection ID) — *optional*. Leave blank and Dograh will auto-create a Call Control Application on save (with the inbound webhook URL already configured) and store its Connection ID on this configuration.
 4. Click **Save Configuration**
 5. Open the configuration you just created and add at least one **phone number** (with country code in E.164 format, e.g. `+1234567890`). The default caller ID is used for outbound calls.
+
+   <Note>
+     If Dograh auto-created the Call Control Application for you, you still
+     need to assign your Telnyx numbers to that application in the Telnyx
+     Portal under **Numbers** → **My Numbers**. The auto-created application
+     is named `dograh-<random>` — its Connection ID is shown on the saved
+     configuration.
+   </Note>
 
 ### Step 3: Test Your Configuration
 
@@ -45,7 +52,7 @@ Before setting up Telnyx integration, you'll need:
 
 ## Inbound Calling Setup
 
-Telnyx delivers inbound webhooks at the **Call Control Application** level — the webhook URL is configured once on the application, and applies to every number assigned to it. **When you save an inbound workflow on a phone number, Dograh automatically pushes the webhook URL to your Call Control Application's `webhook_event_url`** (provided the credentials are correct).
+Telnyx delivers inbound webhooks at the **Call Control Application** level — the webhook URL is configured once on the application, and applies to every number assigned to it. **When you save an inbound workflow on a phone number, Dograh automatically pushes the webhook URL to your Call Control Application's `webhook_event_url`** (provided the credentials are correct). If Dograh auto-created the application during configuration save, the webhook URL is already set and this step is a no-op.
 
 ### Step 1: Assign an Inbound Workflow to the Phone Number
 

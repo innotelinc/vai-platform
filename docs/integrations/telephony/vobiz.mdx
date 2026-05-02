@@ -13,7 +13,7 @@ Before setting up Vobiz integration, you'll need:
 
 - A [Vobiz account](https://vobiz.com)
 - Auth ID and Auth Token from your Vobiz dashboard
-- A Vobiz **Application** (used for inbound webhook routing)
+- A Vobiz **Application** (optional — leave the field blank in Dograh and we'll auto-create one for you on save, with the `answer_url` pre-set)
 - At least one Vobiz phone number
 - Dograh AI instance running and accessible
 
@@ -23,9 +23,8 @@ Before setting up Vobiz integration, you'll need:
 
 1. Log in to your Vobiz dashboard
 2. Find your **Auth ID** and generate an **Auth Token** for API access
-3. Navigate to the **Applications** section and create (or open) the application you'll use with Dograh
-4. Copy the **Application ID** — Dograh will manage its `answer_url`
-5. Navigate to **Phone Numbers** and copy the numbers you plan to use
+3. (Optional) Navigate to the **Applications** section and create (or open) the application you'll use with Dograh, then copy its **Application ID**. Skip this if you want Dograh to auto-create the application for you on save.
+4. Navigate to **Phone Numbers** and copy the numbers you plan to use
 
 ### Step 2: Configure in Dograh AI
 
@@ -34,9 +33,17 @@ Before setting up Vobiz integration, you'll need:
 3. Enter your credentials:
    - Auth ID
    - Auth Token
-   - Application ID
+   - Application ID — *optional*. Leave blank and Dograh will auto-create a Vobiz Application on save (with the `answer_url` already configured) and store its Application ID on this configuration.
 4. Click **Save Configuration**
 5. Open the configuration you just created and add at least one **phone number** (with country code in E.164 format, e.g. `+1234567890`). The default caller ID is used for outbound calls.
+
+   <Note>
+     If Dograh auto-created the Vobiz Application for you, you still need to
+     attach your Vobiz numbers to that application in the Vobiz Console under
+     **Applications**. The auto-created application is named
+     `dograh-<random>` — its Application ID is shown on the saved
+     configuration.
+   </Note>
 
 ### Step 3: Test Your Configuration
 
@@ -46,7 +53,7 @@ Before setting up Vobiz integration, you'll need:
 
 ## Inbound Calling Setup
 
-Vobiz numbers don't carry an `answer_url` directly — the URL lives on a Vobiz **Application**, and each number is linked to one application. **When you save an inbound workflow on a phone number, Dograh automatically pushes the webhook URL to your Vobiz Application's `answer_url`** (provided the credentials are correct).
+Vobiz numbers don't carry an `answer_url` directly — the URL lives on a Vobiz **Application**, and each number is linked to one application. **When you save an inbound workflow on a phone number, Dograh automatically pushes the webhook URL to your Vobiz Application's `answer_url`** (provided the credentials are correct). If Dograh auto-created the application during configuration save, the `answer_url` is already set and this push is a no-op.
 
 ### Step 1: Link the Phone Number to Your Vobiz Application
 

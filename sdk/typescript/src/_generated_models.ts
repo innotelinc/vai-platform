@@ -430,6 +430,8 @@ export interface components {
             workflow_run_id?: number | null;
             /** Phone Number */
             phone_number?: string | null;
+            /** Telephony Configuration Id */
+            telephony_configuration_id?: number | null;
         };
         /**
          * NodeCategory
@@ -738,6 +740,8 @@ export interface components {
             version_number?: number | null;
             /** Version Status */
             version_status?: string | null;
+            /** Workflow Uuid */
+            workflow_uuid?: string | null;
         };
     };
     responses: never;
