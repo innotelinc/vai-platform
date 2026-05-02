@@ -104,6 +104,7 @@
               "integrations/telephony/vobiz",
               "integrations/telephony/asterisk-ari",
               "integrations/telephony/webhooks",
+              "integrations/telephony/agent-stream",
               "integrations/telephony/custom"
             ]
           },
@@ -221,6 +222,30 @@
                   "api-reference/campaigns/resume",
                   "api-reference/campaigns/progress",
                   "api-reference/campaigns/runs"
+                ]
+              },
+              {
+                "group": "Telephony Configurations",
+                "pages": [
+                  "api-reference/telephony-configs",
+                  "api-reference/telephony-configs/providers",
+                  "api-reference/telephony-configs/list",
+                  "api-reference/telephony-configs/create",
+                  "api-reference/telephony-configs/get",
+                  "api-reference/telephony-configs/update",
+                  "api-reference/telephony-configs/delete",
+                  "api-reference/telephony-configs/set-default-outbound",
+                  {
+                    "group": "Phone Numbers",
+                    "pages": [
+                      "api-reference/telephony-configs/phone-numbers/list",
+                      "api-reference/telephony-configs/phone-numbers/create",
+                      "api-reference/telephony-configs/phone-numbers/get",
+                      "api-reference/telephony-configs/phone-numbers/update",
+                      "api-reference/telephony-configs/phone-numbers/delete",
+                      "api-reference/telephony-configs/phone-numbers/set-default-caller"
+                    ]
+                  }
                 ]
               }
             ]
