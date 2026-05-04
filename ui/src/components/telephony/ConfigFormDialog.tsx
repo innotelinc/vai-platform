@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink } from "lucide-react";
+import { Copy, ExternalLink } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -172,6 +172,26 @@ export function ConfigFormDialog({
         </DialogHeader>
 
         <div className="space-y-4">
+          {isEdit && existing && (
+            <div className="space-y-1">
+              <Label>Configuration ID</Label>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard
+                    .writeText(String(existing.id))
+                    .then(() => toast.success("Configuration ID copied"))
+                    .catch(() => toast.error("Failed to copy ID"));
+                }}
+                title="Click to copy"
+                className="group flex w-full items-center gap-2 rounded-md border bg-muted/20 p-2 text-left font-mono text-xs transition-colors hover:bg-muted/40"
+              >
+                <code className="flex-1 truncate">{existing.id}</code>
+                <Copy className="h-3 w-3 shrink-0 text-muted-foreground group-hover:text-foreground" />
+              </button>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="cfg-name">Name</Label>
             <Input

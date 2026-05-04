@@ -22,7 +22,15 @@ SPEC = NodeSpec(
         "  • Test: `<backend>/api/v1/public/agent/test/<trigger_path>` — runs "
         "the latest draft, useful for verifying changes before publishing. "
         "Falls back to the published agent when no draft exists.\n"
-        "Both require an API key in the `X-API-Key` header."
+        "Both require an API key in the `X-API-Key` header.\n"
+        "Request body fields:\n"
+        "  • `phone_number` (string, required) — destination to dial.\n"
+        "  • `initial_context` (object, optional) — merged into the run's "
+        "initial context.\n"
+        "  • `telephony_configuration_id` (int, optional) — pick a specific "
+        "telephony configuration for the call. Must belong to the same "
+        "organization as the trigger. When omitted, the org's default "
+        "outbound configuration is used."
     ),
     category=NodeCategory.trigger,
     icon="Webhook",

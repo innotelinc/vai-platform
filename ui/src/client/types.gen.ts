@@ -3714,6 +3714,10 @@ export type TriggerCallRequest = {
     initial_context?: {
         [key: string]: unknown;
     } | null;
+    /**
+     * Telephony Configuration Id
+     */
+    telephony_configuration_id?: number | null;
 };
 
 /**

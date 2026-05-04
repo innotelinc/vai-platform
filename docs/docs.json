@@ -202,7 +202,6 @@
                 "pages": [
                   "api-reference/calls",
                   "api-reference/calls/trigger",
-                  "api-reference/calls/initiate",
                   "api-reference/calls/get-run",
                   "api-reference/calls/download",
                   "api-reference/calls/inbound"

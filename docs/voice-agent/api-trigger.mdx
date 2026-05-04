@@ -36,7 +36,7 @@ The request body, headers, and response shape are identical for both URLs.
 
 ## Making a request
 
-Authenticate by passing your API key in the `X-API-Key` header. The request body requires a `phone_number` and accepts an optional `initial_context` object.
+Authenticate by passing your API key in the `X-API-Key` header. The request body requires a `phone_number` and accepts optional `initial_context` and `telephony_configuration_id` fields.
 
 ```bash
 curl -X POST https://your-dograh-instance/api/v1/public/agent/{uuid} \
@@ -91,6 +91,19 @@ For example, if your request includes:
 You can reference the user's name in your prompt as `{{initial_context.user.name}}`.
 
 See [Context & Variables](/core-concepts/context-and-variables) for more on how data flows through a call.
+
+## Choosing a telephony configuration
+
+By default, calls are placed through your organization's default outbound [telephony configuration](/integrations/telephony/overview). To route a specific call through a different configuration — for example, to dial out from a regional number — pass `telephony_configuration_id` in the request body.
+
+```json
+{
+  "phone_number": "+14155550100",
+  "telephony_configuration_id": 42
+}
+```
+
+The id is shown on each row in **Telephony configurations** (`https://app.dograh.com/telephony-configurations` for hosted or `http://localhost:3010/telephony-configurations` for local). The configuration must belong to the same organization as the API Trigger; otherwise the request returns `404`.
 
 <Note>
 For full endpoint details including all parameters and response fields, see the [API reference](/api-reference/calls/trigger).

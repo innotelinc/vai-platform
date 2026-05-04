@@ -27,11 +27,6 @@ from pipecat.pipeline.pipeline import Pipeline
 from pipecat.processors.aggregators.llm_response_universal import (
     LLMContextAggregatorPair,
 )
-from pipecat.processors.filters.stt_mute_filter import (
-    STTMuteConfig,
-    STTMuteFilter,
-    STTMuteStrategy,
-)
 
 
 class LoopTalkPipelineBuilder:
@@ -126,13 +121,6 @@ class LoopTalkPipelineBuilder:
 
         context_aggregator = LLMContextAggregatorPair(context)
 
-        # Create STT mute filter
-        stt_mute_filter = STTMuteFilter(
-            config=STTMuteConfig(
-                strategies={STTMuteStrategy.FIRST_SPEECH},
-            )
-        )
-
         # Create pipeline engine callback processor
         pipeline_engine_callback_processor = PipelineEngineCallbacksProcessor(
             max_call_duration_seconds=300,
@@ -152,7 +140,6 @@ class LoopTalkPipelineBuilder:
             [
                 transport.input(),
                 audio_streamer,  # Stream audio to connected clients
-                stt_mute_filter,
                 stt,
                 transcript.user(),
                 user_context_aggregator,

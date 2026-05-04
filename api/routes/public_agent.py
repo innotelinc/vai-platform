@@ -14,7 +14,10 @@ from pydantic import BaseModel
 from api.db import db_client
 from api.enums import TriggerState
 from api.services.quota_service import check_dograh_quota_by_user_id
-from api.services.telephony.factory import get_default_telephony_provider
+from api.services.telephony.factory import (
+    get_default_telephony_provider,
+    get_telephony_provider_by_id,
+)
 from api.utils.common import get_backend_endpoints
 
 router = APIRouter(prefix="/public/agent")
@@ -25,6 +28,7 @@ class TriggerCallRequest(BaseModel):
 
     phone_number: str
     initial_context: Optional[dict] = None
+    telephony_configuration_id: int | None = None
 
 
 class TriggerCallResponse(BaseModel):
@@ -114,14 +118,38 @@ async def _initiate_call(
             detail="Trigger not found in the published Agent",
         )
 
-    # 6. Get telephony provider for the organization (using its default config).
-    try:
-        provider = await get_default_telephony_provider(trigger.organization_id)
-    except ValueError:
-        raise HTTPException(
-            status_code=400,
-            detail="Telephony provider not configured for this organization",
+    # 6. Get telephony provider — either the caller-specified config (validated
+    # against the trigger's org) or the org's default config.
+    if request.telephony_configuration_id is not None:
+        cfg = await db_client.get_telephony_configuration_for_org(
+            request.telephony_configuration_id, trigger.organization_id
         )
+        if not cfg:
+            raise HTTPException(
+                status_code=404, detail="Telephony configuration not found"
+            )
+        try:
+            provider = await get_telephony_provider_by_id(
+                cfg.id, trigger.organization_id
+            )
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="Telephony provider not configured for this configuration",
+            )
+        resolved_cfg_id = cfg.id
+    else:
+        try:
+            provider = await get_default_telephony_provider(trigger.organization_id)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="Telephony provider not configured for this organization",
+            )
+        default_cfg = await db_client.get_default_telephony_configuration(
+            trigger.organization_id
+        )
+        resolved_cfg_id = default_cfg.id if default_cfg else None
 
     # Validate provider is configured
     if not provider.validate_config():
@@ -129,10 +157,6 @@ async def _initiate_call(
             status_code=400,
             detail="Telephony provider not configured for this organization",
         )
-
-    default_cfg = await db_client.get_default_telephony_configuration(
-        trigger.organization_id
-    )
 
     # 7. Determine the workflow run mode based on provider type
     workflow_run_mode = provider.PROVIDER_NAME
@@ -149,7 +173,7 @@ async def _initiate_call(
             "phone_number": request.phone_number,
             "agent_uuid": uuid,
             "trigger_mode": "test" if use_draft else "production",
-            "telephony_configuration_id": default_cfg.id if default_cfg else None,
+            "telephony_configuration_id": resolved_cfg_id,
             **(request.initial_context or {}),
         },
         user_id=api_key.created_by,

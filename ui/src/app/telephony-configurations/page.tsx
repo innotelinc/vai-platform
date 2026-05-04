@@ -2,6 +2,7 @@
 
 import {
   ChevronRight,
+  Copy,
   ExternalLink,
   Pencil,
   Plus,
@@ -198,6 +199,22 @@ export default function TelephonyConfigurationsPage() {
                         {item.phone_number_count} phone{" "}
                         {item.phone_number_count === 1 ? "number" : "numbers"}
                       </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          navigator.clipboard
+                            .writeText(String(item.id))
+                            .then(() => toast.success("Configuration ID copied"))
+                            .catch(() => toast.error("Failed to copy ID"));
+                        }}
+                        title="Click to copy"
+                        className="inline-flex items-center gap-1 self-start rounded font-mono text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        <span className="truncate">Configuration ID: {item.id}</span>
+                        <Copy className="h-3 w-3 shrink-0" />
+                      </button>
                     </div>
                   </Link>
                   <div className="flex items-center gap-1">

@@ -2,6 +2,7 @@
 
 import {
   ArrowLeft,
+  Copy,
   ExternalLink,
   Pencil,
   Plus,
@@ -212,6 +213,20 @@ export default function TelephonyConfigurationDetailPage() {
             <CardDescription>
               Updated {new Date(config.updated_at).toLocaleString()}
             </CardDescription>
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard
+                  .writeText(String(config.id))
+                  .then(() => toast.success("Configuration ID copied"))
+                  .catch(() => toast.error("Failed to copy ID"));
+              }}
+              title="Click to copy"
+              className="inline-flex items-center gap-1 self-start rounded font-mono text-xs text-muted-foreground hover:text-foreground"
+            >
+              <span className="truncate">Configuration ID: {config.id}</span>
+              <Copy className="h-3 w-3 shrink-0" />
+            </button>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {!config.is_default_outbound && (
