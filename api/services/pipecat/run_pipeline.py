@@ -121,10 +121,8 @@ async def run_pipeline_telephony(
     if workflow:
         set_current_org_id(workflow.organization_id)
 
-    vad_config = None
     ambient_noise_config = None
     if workflow and workflow.workflow_configurations:
-        vad_config = workflow.workflow_configurations.get("vad_configuration")
         ambient_noise_config = workflow.workflow_configurations.get(
             "ambient_noise_configuration"
         )
@@ -148,7 +146,6 @@ async def run_pipeline_telephony(
         workflow_run_id,
         audio_config,
         workflow.organization_id,
-        vad_config=vad_config,
         ambient_noise_config=ambient_noise_config,
         telephony_configuration_id=telephony_configuration_id,
         **transport_kwargs,
@@ -191,11 +188,8 @@ async def run_pipeline_smallwebrtc(
     if workflow:
         set_current_org_id(workflow.organization_id)
 
-    vad_config = None
     ambient_noise_config = None
     if workflow and workflow.workflow_configurations:
-        if "vad_configuration" in workflow.workflow_configurations:
-            vad_config = workflow.workflow_configurations["vad_configuration"]
         if "ambient_noise_configuration" in workflow.workflow_configurations:
             ambient_noise_config = workflow.workflow_configurations[
                 "ambient_noise_configuration"
@@ -208,7 +202,6 @@ async def run_pipeline_smallwebrtc(
         webrtc_connection,
         workflow_run_id,
         audio_config,
-        vad_config,
         ambient_noise_config,
     )
     await _run_pipeline(

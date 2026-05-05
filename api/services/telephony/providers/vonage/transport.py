@@ -18,7 +18,6 @@ async def create_transport(
     audio_config: AudioConfig,
     organization_id: int,
     *,
-    vad_config: dict | None = None,
     ambient_noise_config: dict | None = None,
     telephony_configuration_id: int | None = None,
     call_uuid: str,

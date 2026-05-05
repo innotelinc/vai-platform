@@ -15,7 +15,6 @@ async def create_webrtc_transport(
     webrtc_connection: SmallWebRTCConnection,
     workflow_run_id: int,
     audio_config: AudioConfig,
-    vad_config: dict | None = None,
     ambient_noise_config: dict | None = None,
 ):
     """Create a transport for WebRTC connections."""
@@ -39,7 +38,6 @@ def create_internal_transport(
     workflow_run_id: int,
     audio_config: AudioConfig,
     latency_seconds: float = 0.0,
-    vad_config: dict | None = None,
     ambient_noise_config: dict | None = None,
 ):
     """Create an internal transport for agent-to-agent connections (LoopTalk).
