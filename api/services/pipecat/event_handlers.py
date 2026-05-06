@@ -97,6 +97,12 @@ def register_event_handlers(
         "initial_response_triggered": False,
     }
 
+    async def queue_initial_llm_context():
+        # Queue LLMContextFrame after the VoicemailDetector since the detector
+        # gates LLMContextFrames until voicemail detection completes. We also
+        # don't want to trigger the Voicemail LLM with this initial frame.
+        await engine.llm.queue_frame(LLMContextFrame(engine.context))
+
     async def maybe_trigger_initial_response():
         """Start the conversation after both pipeline_started and client_connected events.
 
@@ -185,7 +191,7 @@ def register_event_handlers(
                             f"Failed to fetch audio greeting {greeting_value}, "
                             "falling back to LLM generation"
                         )
-                        await engine.llm.queue_frame(LLMContextFrame(engine.context))
+                        await queue_initial_llm_context()
                 else:
                     logger.debug("Playing text greeting via TTS")
                     # append_to_context=True so the assistant aggregator commits
@@ -198,7 +204,7 @@ def register_event_handlers(
                 logger.debug(
                     "Both pipeline_started and client_connected received - triggering initial LLM generation"
                 )
-                await engine.llm.queue_frame(LLMContextFrame(engine.context))
+                await queue_initial_llm_context()
 
     @transport.event_handler("on_client_connected")
     async def on_client_connected(_transport, _participant):
