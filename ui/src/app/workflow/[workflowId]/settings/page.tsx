@@ -79,7 +79,7 @@ const NAV_ITEMS = [
     { id: "dictionary", label: "Dictionary", icon: BookA },
     { id: "voicemail", label: "Voicemail Detection", icon: PhoneOff },
     { id: "recordings", label: "Recordings", icon: Mic },
-    { id: "deployment", label: "Deployment", icon: Rocket },
+    { id: "deployment", label: "Add to Website", icon: Rocket },
     { id: "report", label: "Report", icon: FileDown },
     { id: "identity", label: "Agent UUID", icon: Fingerprint },
 ];
@@ -1294,17 +1294,16 @@ function WorkflowSettingsInner({
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2 text-base">
                                         <Rocket className="h-4 w-4" />
-                                        Deployment
+                                        Add to Website
                                     </CardTitle>
                                     <CardDescription>
-                                        Generate and manage the embed configuration to deploy this workflow on external
-                                        websites.{" "}
+                                        Configure a widget to add this voice agent to your website.{" "}
                                         <a href={SETTINGS_DOCUMENTATION_URLS.deployment} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline">Learn more <ExternalLink className="h-3 w-3" /></a>
                                     </CardDescription>
                                 </CardHeader>
                                 <CardFooter className="border-t pt-6">
                                     <Button variant="outline" onClick={() => setIsEmbedDialogOpen(true)}>
-                                        Configure Embed
+                                        Configure Widget
                                     </Button>
                                 </CardFooter>
                             </Card>

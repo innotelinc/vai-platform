@@ -1,4 +1,4 @@
-import { Check, Copy, Loader2, Mic, Plus, Rocket, Trash2 } from "lucide-react";
+import { Check, Copy, ExternalLink, Loader2, Mic, Plus, Rocket, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import {
@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import { WIDGET_MODE_DOCUMENTATION_URLS } from "@/constants/documentation";
 
 interface EmbedDialogProps {
     open: boolean;
@@ -177,12 +178,23 @@ export function EmbedDialog({
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-4xl w-full max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        <Rocket className="h-5 w-5" />
-                        Deploy Workflow
-                    </DialogTitle>
+                    <div className="flex items-center justify-between">
+                        <DialogTitle className="flex items-center gap-2">
+                            <Rocket className="h-5 w-5" />
+                            Configure Widget
+                        </DialogTitle>
+                        <a
+                            href={WIDGET_MODE_DOCUMENTATION_URLS[embedMode]}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors pr-6"
+                        >
+                            Docs
+                            <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                    </div>
                     <DialogDescription>
-                        Embed &quot;{workflowName}&quot; on any website with a simple script tag
+                        Add &quot;{workflowName}&quot; to any website with a simple script tag.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -542,8 +554,8 @@ document.getElementById('talk-btn').addEventListener('click', () => {
                                     </Button>
                                 </div>
 
-                                {/* Embed Script (shows after saving) */}
-                                {embedToken && embedToken.is_active && (
+                                {/* Embed Script (shows after saving; placeholder before) */}
+                                {embedToken && embedToken.is_active ? (
                                     <>
                                         <Separator />
                                         <div className="space-y-3">
@@ -576,6 +588,16 @@ document.getElementById('talk-btn').addEventListener('click', () => {
                                                 Add this script to your website&apos;s HTML to enable the voice widget.
                                                 Configuration changes will apply automatically without re-embedding.
                                             </p>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Separator />
+                                        <div className="space-y-3">
+                                            <Label className="text-muted-foreground">Embed Code</Label>
+                                            <div className="rounded-lg border border-dashed bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground">
+                                                Click <span className="font-medium">Save Configurations</span> to generate your embed script.
+                                            </div>
                                         </div>
                                     </>
                                 )}

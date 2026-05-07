@@ -88,7 +88,8 @@
                   "voice-agent/api-trigger",
                   "voice-agent/webhook"
                 ]
-              }
+              },
+              "voice-agent/add-to-website"
             ]
           },
           {
@@ -145,7 +146,6 @@
               "deployment/docker",
               "deployment/custom-domain",
               "deployment/update",
-              "deployment/web-widget",
               "deployment/heroku"
             ]
           },
