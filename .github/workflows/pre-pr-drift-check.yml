@@ -4,13 +4,13 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - 'api/**'
-      - 'ui/**'
-      - 'pipecat/**'
-      - 'scripts/dump_docs_openapi.py'
-      - 'scripts/format.sh'
-      - 'docs/api-reference/openapi.json'
-      - '.github/workflows/pre-pr-drift-check.yml'
+      - "api/**"
+      - "ui/**"
+      - "pipecat/**"
+      - "scripts/dump_docs_openapi.py"
+      - "scripts/format.sh"
+      - "docs/api-reference/openapi.json"
+      - ".github/workflows/pre-pr-drift-check.yml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -30,7 +30,7 @@ jobs:
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.12"
           cache: pip
           cache-dependency-path: |
             api/requirements.txt
@@ -40,15 +40,12 @@ jobs:
       - name: Set up Node 22
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: "22"
           cache: npm
           cache-dependency-path: ui/package-lock.json
 
-      - name: Install api dependencies
-        run: |
-          pip install -r api/requirements.txt
-          pip install -r api/requirements.dev.txt
-          pip install './pipecat[cartesia,deepgram,openai,elevenlabs,groq,google,azure,sarvam,soundfile,silero,webrtc,speechmatics,openrouter,camb]'
+      - name: Install api and pipecat dependencies
+        run: ./scripts/setup_requirements.sh --dev
 
       - name: Install ui dependencies
         working-directory: ui
