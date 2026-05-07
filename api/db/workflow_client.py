@@ -300,10 +300,18 @@ class WorkflowClient(BaseDBClient):
     async def get_workflow_versions(
         self,
         workflow_id: int,
+        limit: int | None = None,
+        offset: int = 0,
     ) -> list[WorkflowDefinitionModel]:
-        """List all versions for a workflow, newest first."""
+        """List versions for a workflow, newest first.
+
+        When `limit` is provided, returns at most `limit` rows starting from
+        `offset` — used by the version history panel to page through long
+        histories without dragging the full `workflow_json` payload for every
+        version on every open.
+        """
         async with self.async_session() as session:
-            result = await session.execute(
+            query = (
                 select(WorkflowDefinitionModel)
                 .where(
                     WorkflowDefinitionModel.workflow_id == workflow_id,
@@ -313,6 +321,11 @@ class WorkflowClient(BaseDBClient):
                 )
                 .order_by(WorkflowDefinitionModel.version_number.desc())
             )
+            if offset:
+                query = query.offset(offset)
+            if limit is not None:
+                query = query.limit(limit)
+            result = await session.execute(query)
             return result.scalars().all()
 
     async def get_all_workflows(

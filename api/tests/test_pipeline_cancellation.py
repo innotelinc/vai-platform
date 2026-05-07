@@ -47,7 +47,7 @@ class BusyWaitProcessor(FrameProcessor):
 
 @pytest.mark.asyncio
 async def test_interruption_with_blocked_end_frame():
-    busy_wait_processor = BusyWaitProcessor(wait_time=0.5)
+    busy_wait_processor = BusyWaitProcessor(wait_time=5.0)
     transport = MockTransport()
     pipeline = Pipeline([transport, busy_wait_processor])
 
@@ -84,8 +84,6 @@ async def test_interruption_with_blocked_end_frame():
     )
 
     # If there are pending tasks, we timed out
-    # FIXME: Currently I have creaetd an issue on pipecat which talks about
-    # how this behaviour is not good. https://github.com/pipecat-ai/pipecat/issues/4412
     if pending:
         # Cancel all pending tasks
         for t in pending:

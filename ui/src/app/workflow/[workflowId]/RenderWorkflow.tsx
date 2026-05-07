@@ -39,6 +39,8 @@ const edgeTypes = {
     custom: CustomEdge,
 };
 
+const VERSIONS_PAGE_SIZE = 10;
+
 interface RenderWorkflowProps {
     initialWorkflowName: string;
     workflowId: number;
@@ -65,6 +67,8 @@ function RenderWorkflow({ initialWorkflowName, workflowId, workflowUuid, initial
     const [isVersionPanelOpen, setIsVersionPanelOpen] = useState(false);
     const [versions, setVersions] = useState<WorkflowVersion[]>([]);
     const [versionsLoading, setVersionsLoading] = useState(false);
+    const [versionsLoadingMore, setVersionsLoadingMore] = useState(false);
+    const [versionsHasMore, setVersionsHasMore] = useState(false);
     const [activeVersionId, setActiveVersionId] = useState<number | null>(null);
     // Version info that updates immediately from the GET/save/publish responses.
     const [currentVersionNumber, setCurrentVersionNumber] = useState<number | null>(initialVersionNumber ?? null);
@@ -104,18 +108,24 @@ function RenderWorkflow({ initialWorkflowName, workflowId, workflowUuid, initial
     // Derive hasDraft from the current version status
     const hasDraft = currentVersionStatus === "draft";
 
-    // Fetch workflow versions, optionally forcing a refresh
+    // Fetch the first page of workflow versions, optionally forcing a refresh.
+    // Pagination keeps the panel snappy when a workflow has accumulated a long
+    // history — `workflow_json` is shipped per row, so loading hundreds at once
+    // is expensive on the wire.
     const fetchVersions = useCallback(async (force = false) => {
         if (versionsFetched.current && !force) return;
         setVersionsLoading(true);
         try {
             const response = await getWorkflowVersionsApiV1WorkflowWorkflowIdVersionsGet({
                 path: { workflow_id: workflowId },
+                query: { limit: VERSIONS_PAGE_SIZE, offset: 0 },
             });
             const data = response.data as WorkflowVersion[] | undefined;
             if (data) {
                 setVersions(data);
-                // Set active version to draft if exists, else published
+                setVersionsHasMore(data.length === VERSIONS_PAGE_SIZE);
+                // Set active version to draft if exists, else published.
+                // Both live on the newest page so the first fetch always sees them.
                 const current = data.find((v) => v.status === "draft") ?? data.find((v) => v.status === "published");
                 if (current) {
                     setActiveVersionId(current.id);
@@ -128,6 +138,24 @@ function RenderWorkflow({ initialWorkflowName, workflowId, workflowUuid, initial
             setVersionsLoading(false);
         }
     }, [workflowId]);
+
+    const handleLoadMoreVersions = useCallback(async () => {
+        if (versionsLoadingMore || !versionsHasMore) return;
+        setVersionsLoadingMore(true);
+        try {
+            const response = await getWorkflowVersionsApiV1WorkflowWorkflowIdVersionsGet({
+                path: { workflow_id: workflowId },
+                query: { limit: VERSIONS_PAGE_SIZE, offset: versions.length },
+            });
+            const data = response.data as WorkflowVersion[] | undefined;
+            if (data) {
+                setVersions((prev) => [...prev, ...data]);
+                setVersionsHasMore(data.length === VERSIONS_PAGE_SIZE);
+            }
+        } finally {
+            setVersionsLoadingMore(false);
+        }
+    }, [workflowId, versions.length, versionsLoadingMore, versionsHasMore]);
 
     const handleOpenVersionPanel = useCallback(() => {
         setIsVersionPanelOpen(true);
@@ -484,6 +512,9 @@ function RenderWorkflow({ initialWorkflowName, workflowId, workflowUuid, initial
                     loading={versionsLoading}
                     activeVersionId={activeVersionId}
                     onSelectVersion={handleSelectVersion}
+                    hasMore={versionsHasMore}
+                    loadingMore={versionsLoadingMore}
+                    onLoadMore={handleLoadMoreVersions}
                 />
 
                 <PhoneCallDialog

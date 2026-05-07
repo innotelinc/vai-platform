@@ -703,9 +703,15 @@ async def get_workflow(
 @router.get("/{workflow_id}/versions")
 async def get_workflow_versions(
     workflow_id: int,
+    limit: int | None = Query(None, ge=1, le=100),
+    offset: int = Query(0, ge=0),
     user: UserModel = Depends(get_user),
 ) -> list[WorkflowVersionResponse]:
-    """List all versions for a workflow, newest first."""
+    """List versions for a workflow, newest first.
+
+    Pass `limit`/`offset` to page through long histories. With no `limit`,
+    returns every version (legacy behavior).
+    """
     workflow = await db_client.get_workflow(
         workflow_id, organization_id=user.selected_organization_id
     )
@@ -714,7 +720,9 @@ async def get_workflow_versions(
             status_code=404, detail=f"Workflow with id {workflow_id} not found"
         )
 
-    versions = await db_client.get_workflow_versions(workflow_id)
+    versions = await db_client.get_workflow_versions(
+        workflow_id, limit=limit, offset=offset
+    )
     return [
         WorkflowVersionResponse(
             id=v.id,

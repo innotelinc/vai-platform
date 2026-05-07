@@ -5694,7 +5694,16 @@ export type GetWorkflowVersionsApiV1WorkflowWorkflowIdVersionsGetData = {
          */
         workflow_id: number;
     };
-    query?: never;
+    query?: {
+        /**
+         * Limit
+         */
+        limit?: number | null;
+        /**
+         * Offset
+         */
+        offset?: number;
+    };
     url: '/api/v1/workflow/{workflow_id}/versions';
 };
 
