@@ -72,7 +72,14 @@ _SCENARIOS = [
     (
         "no_start_node",
         ["no_start_node"],
-        ["Workflow must have exactly one start node"],
+        ["Workflow has no start node"],
+    ),
+    # Two startCall nodes — surfaced separately from no_start_node so
+    # the editor can show a count-specific message.
+    (
+        "multiple_start_nodes",
+        ["multiple_start_nodes:2"],
+        ["Workflow has 2 start nodes"],
     ),
 ]
 

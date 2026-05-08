@@ -222,23 +222,26 @@ class WorkflowGraph:
 
     def _assert_start_node(self):
         errors: list[WorkflowError] = []
-        start_node = [n for n in self.nodes.values() if n.data.is_start]
-        if not start_node:
+        start_nodes = [n for n in self.nodes.values() if n.data.is_start]
+        if not start_nodes:
             errors.append(
                 WorkflowError(
                     kind=ItemKind.workflow,
                     id=None,
                     field=None,
-                    message="Workflow must have exactly one start node",
+                    message="Workflow has no start node — exactly one is required",
                 )
             )
-        elif len(start_node) > 1:
+        elif len(start_nodes) > 1:
             errors.append(
                 WorkflowError(
                     kind=ItemKind.workflow,
                     id=None,
                     field=None,
-                    message="Workflow must have exactly one start node",
+                    message=(
+                        f"Workflow has {len(start_nodes)} start nodes — "
+                        f"exactly one is required"
+                    ),
                 )
             )
         return errors
