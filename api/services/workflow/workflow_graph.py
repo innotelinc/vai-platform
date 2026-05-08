@@ -4,6 +4,7 @@ from typing import Dict, List, Set
 
 from api.services.workflow.dto import EdgeDataDTO, NodeType, ReactFlowDTO
 from api.services.workflow.errors import ItemKind, WorkflowError
+from api.services.workflow.node_specs import REGISTRY
 
 # Regex for matching {{ variable }} template placeholders.
 # Captures: group(1) = variable path, group(2) = filter name, group(3) = filter value.
@@ -259,41 +260,67 @@ class WorkflowGraph:
         return errors
 
     def _assert_connection_counts(self):
+        """Enforce per-type incoming/outgoing edge constraints.
+
+        Driven by `NodeSpec.graph_constraints` so a single source of truth
+        in the spec dictates what's legal. Types without a `graph_constraints`
+        block are unconstrained (e.g. agentNode on the outgoing side).
+        """
         errors: list[WorkflowError] = []
 
         out_deg = Counter()
         in_deg = Counter()
-        for n in self.nodes.values():  # init counters
+        for n in self.nodes.values():
             out_deg[n.id] = in_deg[n.id] = 0
-        for src, n in self.nodes.items():  # compute degrees
+        for src, n in self.nodes.items():
             for m in n.out.values():
                 out_deg[src] += 1
                 in_deg[m.id] += 1
 
         for n in self.nodes.values():
+            spec = REGISTRY.get(n.node_type.value)
+            if spec is None or spec.graph_constraints is None:
+                continue
+            gc = spec.graph_constraints
             in_d, out_d = in_deg[n.id], out_deg[n.id]
+            label = spec.display_name
 
-            match n.node_type:
-                case NodeType.endNode:
-                    if in_d < 1 or out_d != 0:
-                        errors.append(
-                            WorkflowError(
-                                kind=ItemKind.node,
-                                id=n.id,
-                                field=None,
-                                message=f"EndNode must have at least 1 incoming edge",
-                            )
-                        )
-                case NodeType.agentNode:
-                    if in_d < 1:
-                        errors.append(
-                            WorkflowError(
-                                kind=ItemKind.node,
-                                id=n.id,
-                                field=None,
-                                message=f"Worker must have at least 1 incoming edge",
-                            )
-                        )
+            if gc.max_incoming is not None and in_d > gc.max_incoming:
+                msg = (
+                    f"{label} cannot have incoming edges"
+                    if gc.max_incoming == 0
+                    else f"{label} can have at most {gc.max_incoming} incoming edge(s)"
+                )
+                errors.append(
+                    WorkflowError(kind=ItemKind.node, id=n.id, field=None, message=msg)
+                )
+            if gc.min_incoming is not None and in_d < gc.min_incoming:
+                errors.append(
+                    WorkflowError(
+                        kind=ItemKind.node,
+                        id=n.id,
+                        field=None,
+                        message=f"{label} must have at least {gc.min_incoming} incoming edge(s)",
+                    )
+                )
+            if gc.max_outgoing is not None and out_d > gc.max_outgoing:
+                msg = (
+                    f"{label} cannot have outgoing edges"
+                    if gc.max_outgoing == 0
+                    else f"{label} can have at most {gc.max_outgoing} outgoing edge(s)"
+                )
+                errors.append(
+                    WorkflowError(kind=ItemKind.node, id=n.id, field=None, message=msg)
+                )
+            if gc.min_outgoing is not None and out_d < gc.min_outgoing:
+                errors.append(
+                    WorkflowError(
+                        kind=ItemKind.node,
+                        id=n.id,
+                        field=None,
+                        message=f"{label} must have at least {gc.min_outgoing} outgoing edge(s)",
+                    )
+                )
 
         return errors
 

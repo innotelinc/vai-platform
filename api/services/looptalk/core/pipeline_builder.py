@@ -26,7 +26,7 @@ from api.services.pipecat.service_factory import (
 )
 from api.services.workflow.dto import ReactFlowDTO
 from api.services.workflow.pipecat_engine import PipecatEngine
-from api.services.workflow.workflow import WorkflowGraph
+from api.services.workflow.workflow_graph import WorkflowGraph
 
 
 class LoopTalkPipelineBuilder:

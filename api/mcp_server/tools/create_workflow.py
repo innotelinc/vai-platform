@@ -34,7 +34,7 @@ from api.mcp_server.ts_bridge import TsBridgeError, parse_code
 from api.services.posthog_client import capture_event
 from api.services.workflow.dto import ReactFlowDTO
 from api.services.workflow.layout import reconcile_positions
-from api.services.workflow.workflow import WorkflowGraph
+from api.services.workflow.workflow_graph import WorkflowGraph
 
 
 def _error_result(code: str, message: str, **extra: Any) -> dict[str, Any]:

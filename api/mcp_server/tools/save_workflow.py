@@ -36,7 +36,7 @@ from api.mcp_server.tracing import traced_tool
 from api.mcp_server.ts_bridge import TsBridgeError, parse_code
 from api.services.workflow.dto import ReactFlowDTO
 from api.services.workflow.layout import reconcile_positions
-from api.services.workflow.workflow import WorkflowGraph
+from api.services.workflow.workflow_graph import WorkflowGraph
 
 
 async def _previous_workflow_json(workflow: Any) -> dict[str, Any] | None:

@@ -32,7 +32,7 @@ from api.services.storage import storage_fs
 from api.services.workflow.dto import ReactFlowDTO, sanitize_workflow_definition
 from api.services.workflow.duplicate import duplicate_workflow
 from api.services.workflow.errors import ItemKind, WorkflowError
-from api.services.workflow.workflow import WorkflowGraph
+from api.services.workflow.workflow_graph import WorkflowGraph
 
 
 def extract_trigger_paths(workflow_definition: dict) -> List[str]:

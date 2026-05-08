@@ -57,7 +57,7 @@ from api.services.workflow.pipecat_engine_custom_tools import CustomToolManager
 from api.services.workflow.pipecat_engine_variable_extractor import (
     VariableExtractionManager,
 )
-from api.services.workflow.workflow import WorkflowGraph
+from api.services.workflow.workflow_graph import WorkflowGraph
 from api.tests.conftest import END_CALL_SYSTEM_PROMPT, START_CALL_SYSTEM_PROMPT
 from pipecat.tests import MockLLMService, MockTTSService
 

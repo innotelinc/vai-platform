@@ -27,7 +27,7 @@ from api.services.workflow.dto import (
     StartCallRFNode,
     VariableType,
 )
-from api.services.workflow.workflow import WorkflowGraph
+from api.services.workflow.workflow_graph import WorkflowGraph
 
 START_CALL_SYSTEM_PROMPT = "Start Call System Prompt"
 AGENT_SYSTEM_PROMPT = "Agent Node System Prompt"

@@ -369,7 +369,7 @@ async def create_campaign(
     )
     if workflow:
         from api.services.workflow.dto import ReactFlowDTO
-        from api.services.workflow.workflow import WorkflowGraph
+        from api.services.workflow.workflow_graph import WorkflowGraph
 
         workflow_def = workflow.released_definition.workflow_json
         if workflow_def:

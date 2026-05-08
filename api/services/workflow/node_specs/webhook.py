@@ -2,6 +2,7 @@
 after the workflow completes."""
 
 from api.services.workflow.node_specs._base import (
+    GraphConstraints,
     NodeCategory,
     NodeExample,
     NodeSpec,
@@ -132,4 +133,10 @@ SPEC = NodeSpec(
             },
         ),
     ],
+    # Webhooks fire post-call (run_integrations scans nodes by type),
+    # never as a graph step. Reject any edge into or out of a webhook so
+    # the editor can't wire one into the conversation flow.
+    graph_constraints=GraphConstraints(
+        min_incoming=0, max_incoming=0, min_outgoing=0, max_outgoing=0
+    ),
 )

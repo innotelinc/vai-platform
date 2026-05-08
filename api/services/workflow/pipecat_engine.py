@@ -18,7 +18,7 @@ from pipecat.utils.enums import EndTaskReason
 from api.db import db_client
 from api.services.pipecat.audio_playback import play_audio
 from api.services.workflow.disposition_mapper import apply_disposition_mapping
-from api.services.workflow.workflow import Node, WorkflowGraph
+from api.services.workflow.workflow_graph import Node, WorkflowGraph
 
 if TYPE_CHECKING:
     from pipecat.frames.frames import Frame

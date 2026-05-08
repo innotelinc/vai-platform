@@ -31,7 +31,7 @@ from pipecat.tests.mock_transport import MockTransport
 from pipecat.transports.base_transport import TransportParams
 
 from api.services.workflow.pipecat_engine import PipecatEngine
-from api.services.workflow.workflow import WorkflowGraph
+from api.services.workflow.workflow_graph import WorkflowGraph
 from api.tests.conftest import (
     AGENT_SYSTEM_PROMPT,
     END_CALL_SYSTEM_PROMPT,
