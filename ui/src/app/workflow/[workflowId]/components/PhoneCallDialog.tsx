@@ -9,9 +9,10 @@ import { PhoneInput } from 'react-international-phone';
 
 import {
     initiateCallApiV1TelephonyInitiateCallPost,
+    listPhoneNumbersApiV1OrganizationsTelephonyConfigsConfigIdPhoneNumbersGet,
     listTelephonyConfigurationsApiV1OrganizationsTelephonyConfigsGet
 } from '@/client/sdk.gen';
-import type { TelephonyConfigurationListItem } from '@/client/types.gen';
+import type { PhoneNumberResponse, TelephonyConfigurationListItem } from '@/client/types.gen';
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -58,6 +59,9 @@ export const PhoneCallDialog = ({
     const [sipMode, setSipMode] = useState(() => /^(PJSIP|SIP)\//i.test(userConfig?.test_phone_number || ""));
     const [telephonyConfigs, setTelephonyConfigs] = useState<TelephonyConfigurationListItem[]>([]);
     const [selectedConfigId, setSelectedConfigId] = useState<string>("");
+    const [fromPhoneNumbers, setFromPhoneNumbers] = useState<PhoneNumberResponse[]>([]);
+    const [selectedFromPhoneNumberId, setSelectedFromPhoneNumberId] = useState<string>("");
+    const [loadingPhoneNumbers, setLoadingPhoneNumbers] = useState(false);
 
     // Check telephony configuration when dialog opens
     useEffect(() => {
@@ -102,8 +106,48 @@ export const PhoneCallDialog = ({
             setNeedsConfiguration(null);
             setTelephonyConfigs([]);
             setSelectedConfigId("");
+            setFromPhoneNumbers([]);
+            setSelectedFromPhoneNumberId("");
         }
     }, [open]);
+
+    // Fetch phone numbers whenever the selected telephony configuration changes.
+    useEffect(() => {
+        if (!open || !selectedConfigId) {
+            setFromPhoneNumbers([]);
+            setSelectedFromPhoneNumberId("");
+            return;
+        }
+
+        let cancelled = false;
+        const fetchPhoneNumbers = async () => {
+            setLoadingPhoneNumbers(true);
+            try {
+                const response = await listPhoneNumbersApiV1OrganizationsTelephonyConfigsConfigIdPhoneNumbersGet({
+                    path: { config_id: Number(selectedConfigId) },
+                });
+                if (cancelled) return;
+
+                const all = response.data?.phone_numbers ?? [];
+                const active = all.filter((p) => p.is_active);
+                setFromPhoneNumbers(active);
+                const defaultPhone = active.find((p) => p.is_default_caller_id) ?? active[0];
+                setSelectedFromPhoneNumberId(defaultPhone ? String(defaultPhone.id) : "");
+            } catch (err) {
+                if (cancelled) return;
+                console.error("Failed to load phone numbers for config:", err);
+                setFromPhoneNumbers([]);
+                setSelectedFromPhoneNumberId("");
+            } finally {
+                if (!cancelled) setLoadingPhoneNumbers(false);
+            }
+        };
+
+        fetchPhoneNumbers();
+        return () => {
+            cancelled = true;
+        };
+    }, [open, selectedConfigId]);
 
     // Keep phoneNumber in sync with userConfig when dialog opens
     useEffect(() => {
@@ -148,6 +192,7 @@ export const PhoneCallDialog = ({
                     workflow_id: workflowId,
                     phone_number: phoneNumber,
                     telephony_configuration_id: selectedConfigId ? Number(selectedConfigId) : null,
+                    from_phone_number_id: selectedFromPhoneNumberId ? Number(selectedFromPhoneNumberId) : null,
                 },
             });
 
@@ -228,6 +273,38 @@ export const PhoneCallDialog = ({
                             ))}
                         </SelectContent>
                     </Select>
+                </div>
+            )}
+            {selectedConfigId && (
+                <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="from-phone-number">Caller ID (from)</Label>
+                    {loadingPhoneNumbers ? (
+                        <div className="flex items-center text-sm text-muted-foreground">
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            Loading phone numbers...
+                        </div>
+                    ) : fromPhoneNumbers.length > 0 ? (
+                        <Select
+                            value={selectedFromPhoneNumberId}
+                            onValueChange={setSelectedFromPhoneNumberId}
+                        >
+                            <SelectTrigger id="from-phone-number" className="w-full">
+                                <SelectValue placeholder="Select a phone number" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {fromPhoneNumbers.map((phone) => (
+                                    <SelectItem key={phone.id} value={String(phone.id)}>
+                                        {phone.label ? `${phone.label} — ${phone.address}` : phone.address}
+                                        {phone.is_default_caller_id ? " — default" : ""}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    ) : (
+                        <div className="text-xs text-muted-foreground">
+                            No phone numbers in this configuration. The provider will pick one automatically.
+                        </div>
+                    )}
                 </div>
             )}
             {sipMode ? (

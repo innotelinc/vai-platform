@@ -1995,6 +1995,10 @@ export type InitiateCallRequest = {
      * Telephony Configuration Id
      */
     telephony_configuration_id?: number | null;
+    /**
+     * From Phone Number Id
+     */
+    from_phone_number_id?: number | null;
 };
 
 /**
@@ -3684,34 +3688,6 @@ export type TransferCallConfig = {
 };
 
 /**
- * TransferCallRequest
- *
- * Request model for initiating a call transfer.
- */
-export type TransferCallRequest = {
-    /**
-     * Destination
-     */
-    destination: string;
-    /**
-     * Organization Id
-     */
-    organization_id: number;
-    /**
-     * Transfer Id
-     */
-    transfer_id: string;
-    /**
-     * Conference Name
-     */
-    conference_name: string;
-    /**
-     * Timeout
-     */
-    timeout?: number | null;
-};
-
-/**
  * TransferCallToolDefinition
  *
  * Tool definition for Transfer Call tools.
@@ -4625,8 +4601,20 @@ export type WorkflowRunUsageResponse = {
     transcript_url?: string | null;
     /**
      * Phone Number
+     *
+     * Deprecated. Use caller_number and called_number instead.
+     *
+     * @deprecated
      */
     phone_number?: string | null;
+    /**
+     * Caller Number
+     */
+    caller_number?: string | null;
+    /**
+     * Called Number
+     */
+    called_number?: string | null;
     /**
      * Call Type
      */
@@ -4876,33 +4864,6 @@ export type HandleInboundTelephonyApiV1TelephonyInboundWorkflowIdPostErrors = {
 export type HandleInboundTelephonyApiV1TelephonyInboundWorkflowIdPostError = HandleInboundTelephonyApiV1TelephonyInboundWorkflowIdPostErrors[keyof HandleInboundTelephonyApiV1TelephonyInboundWorkflowIdPostErrors];
 
 export type HandleInboundTelephonyApiV1TelephonyInboundWorkflowIdPostResponses = {
-    /**
-     * Successful Response
-     */
-    200: unknown;
-};
-
-export type InitiateCallTransferApiV1TelephonyCallTransferPostData = {
-    body: TransferCallRequest;
-    path?: never;
-    query?: never;
-    url: '/api/v1/telephony/call-transfer';
-};
-
-export type InitiateCallTransferApiV1TelephonyCallTransferPostErrors = {
-    /**
-     * Not found
-     */
-    404: unknown;
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type InitiateCallTransferApiV1TelephonyCallTransferPostError = InitiateCallTransferApiV1TelephonyCallTransferPostErrors[keyof InitiateCallTransferApiV1TelephonyCallTransferPostErrors];
-
-export type InitiateCallTransferApiV1TelephonyCallTransferPostResponses = {
     /**
      * Successful Response
      */
@@ -9559,13 +9520,13 @@ export type GetUsageHistoryApiV1OrganizationsUsageRunsGetData = {
         /**
          * Start Date
          *
-         * ISO format date string
+         * ISO 8601 date-time string (UTC). Lower bound (inclusive) on `created_at`.
          */
         start_date?: string | null;
         /**
          * End Date
          *
-         * ISO format date string
+         * ISO 8601 date-time string (UTC). Upper bound (inclusive) on `created_at`.
          */
         end_date?: string | null;
         /**
@@ -9579,7 +9540,28 @@ export type GetUsageHistoryApiV1OrganizationsUsageRunsGetData = {
         /**
          * Filters
          *
-         * JSON string of filters
+         * JSON-encoded array of filter objects. Each object has the shape:
+         *
+         * ```json
+         * { "attribute": "<name>", "type": "<type>", "value": <value> }
+         * ```
+         *
+         * Supported `attribute` / `type` / `value` combinations:
+         *
+         * | attribute       | type          | value shape                                  | matches                                              |
+         * |-----------------|---------------|----------------------------------------------|------------------------------------------------------|
+         * | `runId`         | `number`      | `{ "value": 12345 }`                         | exact run id                                         |
+         * | `workflowId`    | `number`      | `{ "value": 42 }`                            | exact agent (workflow) id                            |
+         * | `campaignId`    | `number`      | `{ "value": 7 }`                             | exact campaign id                                    |
+         * | `callerNumber`  | `text`        | `{ "value": "415555" }`                      | substring match on `initial_context.caller_number`   |
+         * | `calledNumber`  | `text`        | `{ "value": "9911848" }`                     | substring match on `initial_context.called_number`   |
+         * | `dispositionCode` | `multiSelect` | `{ "codes": ["XFER", "DNC"] }`             | any of the codes in `gathered_context.mapped_call_disposition` |
+         * | `duration`      | `numberRange` | `{ "min": 60, "max": 300 }`                  | call duration (seconds), inclusive bounds            |
+         *
+         * Unknown attributes and unsupported `type` values are silently ignored.
+         *
+         * Date filtering on this endpoint is done via the dedicated `start_date` / `end_date` query params, not via a `dateRange` filter object.
+         *
          */
         filters?: string | null;
     };
@@ -9607,6 +9589,83 @@ export type GetUsageHistoryApiV1OrganizationsUsageRunsGetResponses = {
 };
 
 export type GetUsageHistoryApiV1OrganizationsUsageRunsGetResponse = GetUsageHistoryApiV1OrganizationsUsageRunsGetResponses[keyof GetUsageHistoryApiV1OrganizationsUsageRunsGetResponses];
+
+export type DownloadUsageRunsReportApiV1OrganizationsUsageRunsReportGetData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: {
+        /**
+         * Start Date
+         *
+         * ISO 8601 date-time string (UTC). Lower bound (inclusive) on `created_at`.
+         */
+        start_date?: string | null;
+        /**
+         * End Date
+         *
+         * ISO 8601 date-time string (UTC). Upper bound (inclusive) on `created_at`.
+         */
+        end_date?: string | null;
+        /**
+         * Filters
+         *
+         * JSON-encoded array of filter objects. Each object has the shape:
+         *
+         * ```json
+         * { "attribute": "<name>", "type": "<type>", "value": <value> }
+         * ```
+         *
+         * Supported `attribute` / `type` / `value` combinations:
+         *
+         * | attribute       | type          | value shape                                  | matches                                              |
+         * |-----------------|---------------|----------------------------------------------|------------------------------------------------------|
+         * | `runId`         | `number`      | `{ "value": 12345 }`                         | exact run id                                         |
+         * | `workflowId`    | `number`      | `{ "value": 42 }`                            | exact agent (workflow) id                            |
+         * | `campaignId`    | `number`      | `{ "value": 7 }`                             | exact campaign id                                    |
+         * | `callerNumber`  | `text`        | `{ "value": "415555" }`                      | substring match on `initial_context.caller_number`   |
+         * | `calledNumber`  | `text`        | `{ "value": "9911848" }`                     | substring match on `initial_context.called_number`   |
+         * | `dispositionCode` | `multiSelect` | `{ "codes": ["XFER", "DNC"] }`             | any of the codes in `gathered_context.mapped_call_disposition` |
+         * | `duration`      | `numberRange` | `{ "min": 60, "max": 300 }`                  | call duration (seconds), inclusive bounds            |
+         *
+         * Unknown attributes and unsupported `type` values are silently ignored.
+         *
+         * Date filtering on this endpoint is done via the dedicated `start_date` / `end_date` query params, not via a `dateRange` filter object.
+         *
+         */
+        filters?: string | null;
+    };
+    url: '/api/v1/organizations/usage/runs/report';
+};
+
+export type DownloadUsageRunsReportApiV1OrganizationsUsageRunsReportGetErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DownloadUsageRunsReportApiV1OrganizationsUsageRunsReportGetError = DownloadUsageRunsReportApiV1OrganizationsUsageRunsReportGetErrors[keyof DownloadUsageRunsReportApiV1OrganizationsUsageRunsReportGetErrors];
+
+export type DownloadUsageRunsReportApiV1OrganizationsUsageRunsReportGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
 
 export type GetDailyUsageBreakdownApiV1OrganizationsUsageDailyBreakdownGetData = {
     body?: never;

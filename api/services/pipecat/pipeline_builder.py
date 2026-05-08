@@ -2,9 +2,6 @@ import os
 
 from loguru import logger
 
-from api.constants import (
-    ENABLE_TRACING,
-)
 from api.services.pipecat.audio_config import AudioConfig
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.task import PipelineParams, PipelineTask
@@ -178,7 +175,7 @@ def create_pipeline_task(pipeline, workflow_run_id, audio_config: AudioConfig = 
     task = PipelineTask(
         pipeline,
         params=pipeline_params,
-        enable_tracing=ENABLE_TRACING,
+        enable_tracing=True,
         enable_rtvi=False,
         conversation_id=f"{workflow_run_id}",
     )

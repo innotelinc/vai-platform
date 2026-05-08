@@ -55,6 +55,9 @@ class InitiateCallRequest(BaseModel):
     # Optional explicit telephony config to use for the test call. If omitted,
     # falls back to the user's per-user default (when set), then the org default.
     telephony_configuration_id: int | None = None
+    # Optional caller-ID phone number to dial out from. Must belong to the
+    # resolved telephony configuration; otherwise the provider picks one.
+    from_phone_number_id: int | None = None
 
 
 @router.post(
@@ -173,11 +176,29 @@ async def initiate_call(
 
     keywords = {"workflow_id": request.workflow_id, "user_id": user.id}
 
+    # Resolve optional caller-ID. The config has already been validated against
+    # the user's organization, so filtering by config_id is sufficient for
+    # tenant isolation.
+    from_number: str | None = None
+    if request.from_phone_number_id is not None:
+        if telephony_configuration_id is None:
+            raise HTTPException(
+                status_code=400,
+                detail="from_phone_number_id_requires_telephony_configuration",
+            )
+        phone_row = await db_client.get_phone_number_for_config(
+            request.from_phone_number_id, telephony_configuration_id
+        )
+        if not phone_row or not phone_row.is_active:
+            raise HTTPException(status_code=400, detail="from_phone_number_not_found")
+        from_number = phone_row.address_normalized
+
     # Initiate call via provider
     result = await provider.initiate_call(
         to_number=phone_number,
         webhook_url=webhook_url,
         workflow_run_id=workflow_run_id,
+        from_number=from_number,
         **keywords,
     )
 

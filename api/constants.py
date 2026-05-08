@@ -13,9 +13,6 @@ FILLER_SOUND_PROBABILITY = 0.0
 
 VOICEMAIL_RECORDING_DURATION = 5.0
 
-# Configuration constants
-ENABLE_TRACING = os.getenv("ENABLE_TRACING", "false").lower() == "true"
-
 # Langfuse Configuration
 LANGFUSE_HOST = os.getenv("LANGFUSE_HOST")
 LANGFUSE_PUBLIC_KEY = os.getenv("LANGFUSE_PUBLIC_KEY")

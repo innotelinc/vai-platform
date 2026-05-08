@@ -1,6 +1,13 @@
+"""CSV reports built from completed workflow runs.
+
+Shared by campaign-, workflow-, and organization-usage-scoped reports.
+The DB client supplies the row set; this module owns the column layout
+so every endpoint emits the same shape.
+"""
+
 import csv
 import io
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, List, Optional
 
 from api.constants import BACKEND_API_ENDPOINT
@@ -25,11 +32,8 @@ def _collect_extracted_variable_keys(runs: List[Any]) -> list[str]:
     return list(keys)
 
 
-def _build_run_report_csv(runs: List[Any]) -> io.StringIO:
-    """Build a CSV from completed workflow runs.
-
-    Shared between campaign-scoped and workflow-scoped reports.
-    """
+def build_run_report_csv(runs: List[Any]) -> io.StringIO:
+    """Build a CSV from completed workflow runs."""
     extracted_var_keys = _collect_extracted_variable_keys(runs)
 
     output = io.StringIO()
@@ -98,7 +102,7 @@ async def generate_campaign_report_csv(
     runs = await db_client.get_completed_runs_for_report(
         campaign_id=campaign_id, start_date=start_date, end_date=end_date
     )
-    return _build_run_report_csv(runs), f"campaign_{campaign_id}_report.csv"
+    return build_run_report_csv(runs), f"campaign_{campaign_id}_report.csv"
 
 
 async def generate_workflow_report_csv(
@@ -110,4 +114,24 @@ async def generate_workflow_report_csv(
     runs = await db_client.get_completed_runs_for_report(
         workflow_id=workflow_id, start_date=start_date, end_date=end_date
     )
-    return _build_run_report_csv(runs), f"workflow_{workflow_id}_report.csv"
+    return build_run_report_csv(runs), f"workflow_{workflow_id}_report.csv"
+
+
+async def generate_usage_runs_report_csv(
+    organization_id: int,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    filters: Optional[list[dict]] = None,
+) -> tuple[io.StringIO, str]:
+    """Generate a CSV report for runs visible on the org-wide usage page.
+
+    Honors the same date / filter inputs as the `/usage/runs` listing.
+    """
+    runs = await db_client.get_usage_runs_for_report(
+        organization_id,
+        start_date=start_date,
+        end_date=end_date,
+        filters=filters,
+    )
+    timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+    return build_run_report_csv(runs), f"usage_runs_{timestamp}.csv"

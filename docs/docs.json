@@ -203,6 +203,7 @@
                   "api-reference/calls",
                   "api-reference/calls/trigger",
                   "api-reference/calls/get-run",
+                  "api-reference/calls/list-runs",
                   "api-reference/calls/download",
                   "api-reference/calls/inbound"
                 ]

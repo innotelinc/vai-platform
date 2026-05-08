@@ -166,7 +166,7 @@ export function AppSidebar() {
 
   const observeSection = [
     {
-      title: "Usage",
+      title: "Agent Runs",
       url: "/usage",
       icon: TrendingUp,
     },

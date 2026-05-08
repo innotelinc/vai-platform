@@ -110,8 +110,9 @@ services:
       # FastAPI workers count
       FASTAPI_WORKERS: 1
 
-      # Langfuse
-      ENABLE_TRACING: "false"
+      # Langfuse — credentials can be set here or per-organization via the UI
+      # at /settings. Tracing is automatically active when credentials are
+      # available; uncomment to set defaults for all organizations.
       # LANGFUSE_SECRET_KEY: ""
       # LANGFUSE_PUBLIC_KEY: ""
       # LANGFUSE_HOST: ""
