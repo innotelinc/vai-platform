@@ -1,5 +1,5 @@
 """Regression tests for WorkflowGraph edge/graph constraints + the
-admin audit script that mirrors them.
+rule-based audit that mirrors them.
 
 Each fixture in `dto_fixtures/` is either a clean workflow or a single
 category of violation we found in production. We pin two layers:
@@ -8,10 +8,10 @@ category of violation we found in production. We pin two layers:
      both MCP tools. Driven by `NodeSpec.graph_constraints`. If this
      layer ever stops rejecting one of these fixtures, the production
      write paths will quietly start accepting bad workflows again.
-  2. audit_definition (api.services.admin_utils.local_exec) — read-only
-     sweep over persisted rows used to find legacy/imported breakage.
-     Pinned so refactors of the rule set don't silently change the
-     verdicts the migration relies on.
+  2. audit_definition (api.services.workflow.audit) — read-only sweep
+     over persisted rows used by the admin cleanup script to find
+     legacy/imported breakage. Pinned so refactors of the rule set
+     don't silently change the verdicts the migration relies on.
 
 DTO-level shape validation is covered by `test_dto.py` and isn't
 re-pinned here.
@@ -22,7 +22,7 @@ from pathlib import Path
 
 import pytest
 
-from api.services.admin_utils.local_exec import audit_definition
+from api.services.workflow.audit import audit_definition
 from api.services.workflow.dto import ReactFlowDTO
 from api.services.workflow.workflow_graph import WorkflowGraph
 
