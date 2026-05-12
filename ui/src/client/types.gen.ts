@@ -3175,6 +3175,22 @@ export type SuperuserWorkflowRunsListResponse = {
 };
 
 /**
+ * TelephonyConfigWarningsResponse
+ *
+ * Aggregated telephony-configuration warning counts for the user's org.
+ *
+ * Drives the page banner and nav badge that nudge customers to finish
+ * optional-but-recommended configuration steps. Shape is a flat dict so
+ * new warning types can be added without breaking the client.
+ */
+export type TelephonyConfigWarningsResponse = {
+    /**
+     * Telnyx Missing Webhook Public Key Count
+     */
+    telnyx_missing_webhook_public_key_count: number;
+};
+
+/**
  * TelephonyConfigurationCreateRequest
  *
  * Body for ``POST /telephony-configs``.
@@ -3441,6 +3457,12 @@ export type TelnyxConfigurationRequest = {
      */
     connection_id?: string | null;
     /**
+     * Webhook Public Key
+     *
+     * Webhook public key from Mission Control Portal → Keys & Credentials → Public Key. Used to verify Telnyx webhook signatures.
+     */
+    webhook_public_key?: string | null;
+    /**
      * From Numbers
      *
      * List of Telnyx phone numbers
@@ -3466,6 +3488,10 @@ export type TelnyxConfigurationResponse = {
      * Connection Id
      */
     connection_id?: string | null;
+    /**
+     * Webhook Public Key
+     */
+    webhook_public_key?: string | null;
     /**
      * From Numbers
      */
@@ -5081,6 +5107,38 @@ export type HandleTelnyxEventsApiV1TelephonyTelnyxEventsWorkflowRunIdPostErrors 
 export type HandleTelnyxEventsApiV1TelephonyTelnyxEventsWorkflowRunIdPostError = HandleTelnyxEventsApiV1TelephonyTelnyxEventsWorkflowRunIdPostErrors[keyof HandleTelnyxEventsApiV1TelephonyTelnyxEventsWorkflowRunIdPostErrors];
 
 export type HandleTelnyxEventsApiV1TelephonyTelnyxEventsWorkflowRunIdPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type HandleTelnyxTransferResultApiV1TelephonyTelnyxTransferResultTransferIdPostData = {
+    body?: never;
+    path: {
+        /**
+         * Transfer Id
+         */
+        transfer_id: string;
+    };
+    query?: never;
+    url: '/api/v1/telephony/telnyx/transfer-result/{transfer_id}';
+};
+
+export type HandleTelnyxTransferResultApiV1TelephonyTelnyxTransferResultTransferIdPostErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type HandleTelnyxTransferResultApiV1TelephonyTelnyxTransferResultTransferIdPostError = HandleTelnyxTransferResultApiV1TelephonyTelnyxTransferResultTransferIdPostErrors[keyof HandleTelnyxTransferResultApiV1TelephonyTelnyxTransferResultTransferIdPostErrors];
+
+export type HandleTelnyxTransferResultApiV1TelephonyTelnyxTransferResultTransferIdPostResponses = {
     /**
      * Successful Response
      */
@@ -7952,6 +8010,45 @@ export type GetTelephonyProvidersMetadataApiV1OrganizationsTelephonyProvidersMet
 };
 
 export type GetTelephonyProvidersMetadataApiV1OrganizationsTelephonyProvidersMetadataGetResponse = GetTelephonyProvidersMetadataApiV1OrganizationsTelephonyProvidersMetadataGetResponses[keyof GetTelephonyProvidersMetadataApiV1OrganizationsTelephonyProvidersMetadataGetResponses];
+
+export type GetTelephonyConfigWarningsApiV1OrganizationsTelephonyConfigWarningsGetData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/organizations/telephony-config-warnings';
+};
+
+export type GetTelephonyConfigWarningsApiV1OrganizationsTelephonyConfigWarningsGetErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetTelephonyConfigWarningsApiV1OrganizationsTelephonyConfigWarningsGetError = GetTelephonyConfigWarningsApiV1OrganizationsTelephonyConfigWarningsGetErrors[keyof GetTelephonyConfigWarningsApiV1OrganizationsTelephonyConfigWarningsGetErrors];
+
+export type GetTelephonyConfigWarningsApiV1OrganizationsTelephonyConfigWarningsGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: TelephonyConfigWarningsResponse;
+};
+
+export type GetTelephonyConfigWarningsApiV1OrganizationsTelephonyConfigWarningsGetResponse = GetTelephonyConfigWarningsApiV1OrganizationsTelephonyConfigWarningsGetResponses[keyof GetTelephonyConfigWarningsApiV1OrganizationsTelephonyConfigWarningsGetResponses];
 
 export type ListTelephonyConfigurationsApiV1OrganizationsTelephonyConfigsGetData = {
     body?: never;
