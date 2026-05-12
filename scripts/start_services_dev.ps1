@@ -46,7 +46,11 @@ if (Test-Path $EnvFile) {
     }
 }
 
-if (-not $env:UVICORN_BASE_PORT) { $env:UVICORN_BASE_PORT = '8000' }
+if (-not $env:UVICORN_BASE_PORT)   { $env:UVICORN_BASE_PORT = '8000' }
+
+$HealthEndpoint    = '/api/v1/health'
+$HealthMaxAttempts = if ($env:HEALTH_MAX_ATTEMPTS) { [int]$env:HEALTH_MAX_ATTEMPTS } else { 30 }
+$HealthInterval    = if ($env:HEALTH_INTERVAL)     { [int]$env:HEALTH_INTERVAL }     else { 2 }
 
 ###############################################################################
 ### 2) Define services
@@ -129,7 +133,35 @@ foreach ($spec in $serviceSpecs) {
 }
 
 ###############################################################################
-### 8) Summary
+### 8) Wait for uvicorn health check
+###############################################################################
+
+$healthUrl = "http://127.0.0.1:$($env:UVICORN_BASE_PORT)$HealthEndpoint"
+Write-Host "Waiting for uvicorn health check at $healthUrl ..."
+
+$healthy = $false
+for ($attempt = 1; $attempt -le $HealthMaxAttempts; $attempt++) {
+    try {
+        $resp = Invoke-WebRequest -Uri $healthUrl -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop
+        if ($resp.StatusCode -eq 200) {
+            Write-Host "OK uvicorn healthy (attempt $attempt)"
+            $healthy = $true
+            break
+        }
+    } catch {
+        # connection refused / timeout / non-200 — keep polling
+    }
+    Start-Sleep -Seconds $HealthInterval
+}
+
+if (-not $healthy) {
+    Write-Host "FAIL uvicorn FAILED health check after $HealthMaxAttempts attempts."
+    Write-Host "     Check logs: Get-Content logs/latest/uvicorn.log -Wait"
+    exit 1
+}
+
+###############################################################################
+### 9) Summary
 ###############################################################################
 
 Write-Host ""
