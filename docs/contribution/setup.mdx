@@ -109,6 +109,21 @@ tail -f logs/latest/*.log
 Get-Content logs/latest/*.log -Wait
 ```
 </CodeGroup>
+
+#### Restarting the backend
+Re-run the same start script to restart. It reads the PID files under `run/`, terminates the previous services along with their descendants, and starts fresh ones.
+<CodeGroup>
+```bash macOS/Linux
+bash scripts/start_services_dev.sh
+```
+```powershell Windows
+.\scripts\start_services_dev.ps1
+```
+</CodeGroup>
+
+<Note>
+`uvicorn` runs with `--reload --reload-dir api`, so edits under `api/` are picked up automatically — no restart needed. The other services (`ari_manager`, `campaign_orchestrator`, `arq`) do **not** auto-reload; re-run the start script after changing code they execute.
+</Note>
 10. Start the UI
 ```
 cd ui && npm run dev

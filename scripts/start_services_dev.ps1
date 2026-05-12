@@ -1,13 +1,12 @@
 #!/usr/bin/env pwsh
 # Start Dograh services in development mode (Windows)
-# Usage: .\scripts\start_services_dev.ps1 [-ArqWorkers 2] [-NoMigrations] [-IncludeTelephonyWorkers]
+# Usage: .\scripts\start_services_dev.ps1 [-NoMigrations] [-IncludeTelephonyWorkers]
 #
 # Note: Telephony workers (ari_manager, campaign_orchestrator) are disabled by
 # default on Windows because they use Unix signal handlers not supported by the
 # Windows asyncio event loop.
 
 Param(
-    [int]$ArqWorkers = 1,
     [switch]$NoMigrations,
     [switch]$IncludeTelephonyWorkers
 )
@@ -61,10 +60,7 @@ if ($IncludeTelephonyWorkers) {
 }
 
 $serviceSpecs += @{ Name = 'uvicorn'; Cmd = "uvicorn api.app:app --host 0.0.0.0 --port $($env:UVICORN_BASE_PORT) --reload --reload-dir api" }
-
-for ($i = 1; $i -le $ArqWorkers; $i++) {
-    $serviceSpecs += @{ Name = "arq$i"; Cmd = "python -m arq api.tasks.arq.WorkerSettings --custom-log-dict api.tasks.arq.LOG_CONFIG" }
-}
+$serviceSpecs += @{ Name = 'arq';     Cmd = "python -m arq api.tasks.arq.WorkerSettings --custom-log-dict api.tasks.arq.LOG_CONFIG" }
 
 ###############################################################################
 ### 3) Activate virtual environment

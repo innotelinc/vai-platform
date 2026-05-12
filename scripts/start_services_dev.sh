@@ -17,7 +17,6 @@ LOG_DIR="$BASE_LOG_DIR/$TIMESTAMP"      # Timestamped log directory
 LATEST_LINK="$BASE_LOG_DIR/latest"      # Symlink to latest logs
 VENV_PATH="$BASE_DIR/venv"
 
-ARQ_WORKERS=${ARQ_WORKERS:-1}
 LOG_TO_FILE=${LOG_TO_FILE:-true}
 
 cd "$BASE_DIR"
@@ -42,19 +41,15 @@ SERVICE_NAMES=(
   "ari_manager"
   "campaign_orchestrator"
   "uvicorn"
+  "arq"
 )
 
 SERVICE_COMMANDS=(
   "python -m api.services.telephony.ari_manager"
   "python -m api.services.campaign.campaign_orchestrator"
   "uvicorn api.app:app --host 0.0.0.0 --port $UVICORN_BASE_PORT --reload --reload-dir api"
+  "python -m arq api.tasks.arq.WorkerSettings --custom-log-dict api.tasks.arq.LOG_CONFIG"
 )
-
-# Add ARQ workers dynamically
-for ((i=1; i<=ARQ_WORKERS; i++)); do
-  SERVICE_NAMES+=("arq$i")
-  SERVICE_COMMANDS+=("python -m arq api.tasks.arq.WorkerSettings --custom-log-dict api.tasks.arq.LOG_CONFIG")
-done
 
 ###############################################################################
 ### 3) Activate virtual environment
@@ -217,6 +212,3 @@ echo "Logs: tail -f $LOG_DIR/*.log"
 echo "Rotated logs: ls $LOG_DIR/*.log.*"
 echo "To stop: ./scripts/stop_services.sh"
 echo "──────────────────────────────────────────────────"
-
-# Keep the script alive (required for Docker - PID 1 must not exit)
-wait
