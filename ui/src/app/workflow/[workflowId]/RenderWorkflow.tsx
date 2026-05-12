@@ -92,6 +92,8 @@ function RenderWorkflow({ initialWorkflowName, workflowId, workflowUuid, initial
         setIsAddNodePanelOpen,
         handleNodeSelect,
         saveWorkflow,
+        workflowConfigurations,
+        saveWorkflowConfigurations,
         onConnect,
         onEdgesChange,
         onNodesChange,
@@ -312,6 +314,17 @@ function RenderWorkflow({ initialWorkflowName, workflowId, workflowUuid, initial
         }
     }, [saveWorkflow, isViewingHistoricalVersion, fetchVersions]);
 
+    const renameWorkflow = useCallback(async (newName: string) => {
+        // The header doesn't render the pencil until the page has mounted with
+        // initial data, so workflowConfigurations is non-null by the time this
+        // runs. Throw rather than silently sending DEFAULT_WORKFLOW_CONFIGURATIONS,
+        // which would overwrite the saved server-side config.
+        if (!workflowConfigurations) {
+            throw new Error("Workflow configurations not loaded");
+        }
+        await saveWorkflowConfigurations(workflowConfigurations, newName);
+    }, [saveWorkflowConfigurations, workflowConfigurations]);
+
     // Memoize the context value to prevent unnecessary re-renders
     const workflowContextValue = useMemo(() => ({
         saveWorkflow: guardedSaveWorkflow,
@@ -342,6 +355,7 @@ function RenderWorkflow({ initialWorkflowName, workflowId, workflowUuid, initial
                     onBackToDraft={handleBackToDraft}
                     hasDraft={hasDraft}
                     onPublished={handlePublished}
+                    renameWorkflow={renameWorkflow}
                 />
 
                 {/* Workflow Canvas */}
