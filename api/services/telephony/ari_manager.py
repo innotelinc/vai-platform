@@ -656,9 +656,7 @@ class ARIConnection:
             #    pending bridge entry regardless of ordering.
             await self._mark_ext_channel(ext_channel_id)
             await self._set_channel_run(ext_channel_id, workflow_run_id)
-            await self._set_pending_bridge(
-                ext_channel_id, channel_id, workflow_run_id
-            )
+            await self._set_pending_bridge(ext_channel_id, channel_id, workflow_run_id)
             await db_client.update_workflow_run(
                 run_id=int(workflow_run_id),
                 gathered_context={"ext_channel_id": ext_channel_id},

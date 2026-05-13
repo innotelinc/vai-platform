@@ -108,15 +108,6 @@ SPEC = NodeSpec(
                 "transcript_url": "{{transcript_url}}",
             },
         ),
-        PropertySpec(
-            name="retry_config",
-            type=PropertyType.json,
-            display_name="Retry Configuration",
-            description=(
-                "Optional retry settings: `enabled` (bool), `max_retries` "
-                "(int), `retry_delay_seconds` (int)."
-            ),
-        ),
     ],
     examples=[
         NodeExample(
