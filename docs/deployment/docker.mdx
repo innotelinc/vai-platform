@@ -57,9 +57,15 @@ The Quick Start above relies on direct peer-to-peer WebRTC between your browser 
 
 For these cases, use the alternate local setup script which configures a coturn TURN server alongside the rest of the stack:
 
-```bash
+<CodeGroup>
+```bash macOS/Linux
 curl -o setup_local.sh https://raw.githubusercontent.com/dograh-hq/dograh/main/scripts/setup_local.sh && chmod +x setup_local.sh && ./setup_local.sh
 ```
+```powershell Windows
+Invoke-WebRequest -OutFile setup_local.ps1 https://raw.githubusercontent.com/dograh-hq/dograh/main/scripts/setup_local.ps1
+.\setup_local.ps1
+```
+</CodeGroup>
 
 The script will prompt you for:
 - Whether to enable coturn (answer `y`)
