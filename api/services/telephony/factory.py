@@ -28,7 +28,7 @@ from api.services.telephony.base import TelephonyProvider
 
 
 async def load_telephony_config_by_id(
-    telephony_configuration_id: int,
+    telephony_configuration_id: int | str | None,
     organization_id: int,
 ) -> Dict[str, Any]:
     """Load and normalize the config row by primary key, scoped to the org.
@@ -39,17 +39,19 @@ async def load_telephony_config_by_id(
     or doesn't belong to ``organization_id`` — the org scope is what makes
     this safe to expose to user-driven request flows.
     """
-    if not telephony_configuration_id:
-        raise ValueError("telephony_configuration_id is required")
+    try:
+        resolved_cfg_id = int(telephony_configuration_id)
+    except (TypeError, ValueError) as e:
+        raise ValueError("telephony_configuration_id must be an integer") from e
     if not organization_id:
         raise ValueError("organization_id is required")
 
     row = await db_client.get_telephony_configuration_for_org(
-        telephony_configuration_id, organization_id
+        resolved_cfg_id, organization_id
     )
     if not row:
         raise ValueError(
-            f"Telephony configuration {telephony_configuration_id} not found "
+            f"Telephony configuration {resolved_cfg_id} not found "
             f"for organization {organization_id}"
         )
     return await _normalize_with_phone_numbers(row)
@@ -120,7 +122,7 @@ async def find_telephony_config_for_inbound(
 
 
 async def get_telephony_provider_by_id(
-    telephony_configuration_id: int,
+    telephony_configuration_id: int | str | None,
     organization_id: int,
 ) -> TelephonyProvider:
     config = await load_telephony_config_by_id(
@@ -142,7 +144,7 @@ async def get_telephony_provider_for_run(
     still resolve.
     """
     cfg_id = (workflow_run.initial_context or {}).get("telephony_configuration_id")
-    if cfg_id:
+    if cfg_id is not None:
         return await get_telephony_provider_by_id(cfg_id, organization_id)
     return await get_default_telephony_provider(organization_id)
 
@@ -167,7 +169,7 @@ async def get_telephony_provider_for_inbound(
 
 async def load_credentials_for_transport(
     organization_id: int,
-    telephony_configuration_id: Optional[int],
+    telephony_configuration_id: Optional[int | str],
     expected_provider: str,
 ) -> Dict[str, Any]:
     """Helper for per-provider transport modules.
@@ -178,10 +180,9 @@ async def load_credentials_for_transport(
     so legacy runs created before the multi-config migration still work.
     Raises ValueError when the resolved config is for a different provider.
     """
-    if telephony_configuration_id:
-        config = await load_telephony_config_by_id(
-            telephony_configuration_id, organization_id
-        )
+    resolved_cfg_id = telephony_configuration_id
+    if resolved_cfg_id is not None:
+        config = await load_telephony_config_by_id(resolved_cfg_id, organization_id)
     else:
         config = await load_default_telephony_config(organization_id)
 
@@ -189,7 +190,7 @@ async def load_credentials_for_transport(
     if actual != expected_provider:
         raise ValueError(
             f"Expected {expected_provider} provider, got {actual} "
-            f"(config_id={telephony_configuration_id}, org={organization_id})"
+            f"(config_id={resolved_cfg_id}, org={organization_id})"
         )
     return config
 
@@ -197,11 +198,6 @@ async def load_credentials_for_transport(
 async def get_all_telephony_providers() -> List[Type[TelephonyProvider]]:
     """All registered provider classes — used by inbound webhook detection."""
     return [spec.provider_cls for spec in registry.all_specs()]
-
-
-# ---------------------------------------------------------------------------
-# Internals
-# ---------------------------------------------------------------------------
 
 
 async def _normalize_with_phone_numbers(
