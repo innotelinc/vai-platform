@@ -15,7 +15,7 @@ dograh Webhook node ──POST──▶ n8n Webhook trigger
         ▼
 [1] HTTP Request  ──GET transcript_url──▶  transcript text
         ▼
-[2] HTTP Request  ──POST 9Router → Ollama llama3.2 /v1/chat/completions──▶  JSON grade
+[2] HTTP Request  ──POST 9Router → Ollama llama3.2:1b /v1/chat/completions──▶  JSON grade
         │  body: messages = [system: RUBRIC, user: transcript]
         ▼
 [3] Code node  ──parse choices[0].message.content──▶  normalized fields
@@ -50,17 +50,19 @@ dograh Webhook node ──POST──▶ n8n Webhook trigger
 
 ## Node 2 — HTTP Request: fetch the transcript
 
-- Method `GET`, URL `{{ $json.body.transcript_url }}`.
-- **Caveat**: if `BACKEND_API_ENDPOINT` is `http://localhost:8000`, replace the
-  host with `host.docker.internal` (n8n's own localhost is the n8n container):
-  set the URL to
-  `{{ $json.body.transcript_url.replace('localhost', 'host.docker.internal') }}`.
+- Method `GET`. The canonical workflow rewrites the incoming public
+  `transcript_url` to `N8N_VAI_API_INTERNAL_URL` (default `http://api:8000`)
+  while preserving its path and query string, and adds the internal-download
+  flag. The API then redirects n8n to Docker-internal MinIO instead of routing
+  it back through NPM/DNS for either hop.
+- For a manual rebuild, use the same internal base URL rather than
+  `localhost`: n8n's localhost is the n8n container itself.
 - Response: plain text transcript. Output it as `transcript`.
 
-## Node 3 — HTTP Request: grade via 9Router → Ollama (llama3.2)
+## Node 3 — HTTP Request: grade via 9Router → Ollama (llama3.2:1b)
 
 - Method `POST`, URL `http://nine-router:20128/v1/chat/completions`
-  (the in-stack 9Router gateway, forwarding to Ollama model `llama3.2`).
+  (the in-stack 9Router gateway, forwarding to Ollama model `llama3.2:1b`).
 - Headers: `Content-Type: application/json`.
 - **Must set `specifyBody: "json"`** on the node, or n8n ignores `jsonBody`
   and sends an empty body (`{"":""}`). The URL field has no such gate, which
@@ -70,9 +72,8 @@ dograh Webhook node ──POST──▶ n8n Webhook trigger
 
 ```json
 {
-  "model": "llama3.2",
+  "model": "llama3.2:1b",
   "temperature": 0.2,
-  "response_format": { "type": "json_object" },
   "messages": [
     { "role": "system", "content": "{{ $('System Prompt').item.json.prompt }}" },
     { "role": "user", "content": "STUDENT: {{ $('Set transcript').item.json.student_name }}\n\nINTERVIEW TRANSCRIPT:\n{{ $('Set transcript').item.json.transcript }}" }
@@ -80,9 +81,9 @@ dograh Webhook node ──POST──▶ n8n Webhook trigger
 }
 ```
 
-> Ollama's OpenAI-compatible endpoint doesn't use `response_format`; the
-> rubric below demands strict JSON and the verified workflow omits the field,
-> so the model emits JSON from the prompt alone.
+> The workflow intentionally omits `response_format`: Ollama's OpenAI-compatible
+> endpoint has varied support for that OpenAI-only field. The rubric demands
+> strict JSON in the prompt, and the parser also tolerates fenced JSON.
 
 ## Node 3b — Code node: parse the grade
 
@@ -136,7 +137,7 @@ return [{
 Create the `Interviews` table in Grist first (columns: Student, Phone, RunID,
 Score, Verdict, Dimensions, Strengths, Improvements, Transcript). The merged
 Compose stack keeps Grist in the same project; set the resulting document ID in
-`GRIST_DOC_ID` before restarting `n8n-import`.
+`GRIST_DOC_ID` before restarting n8n.
 
 **NocoDB alternative:** `POST http://nocodb:8080/api/v2/meta/tables/<TABLE_ID>/records`
 with header `xc-auth: <token>` and the same fields as a flat JSON object.
@@ -249,7 +250,7 @@ aren't part of the live dograh dev stack:
   endpoint 302-redirects to a signed MinIO URL, which n8n follows by default)
   and retrieved the transcript.
 - **grading call** — n8n POSTed `{model, temperature, messages}` to an
-  OpenAI-compatible stand-in (the live stack now points this at the in-stack 9Router gateway and Ollama llama3.2): the system message carried the full rubric and the user
+  OpenAI-compatible stand-in (the live stack now points this at the in-stack 9Router gateway and Ollama llama3.2:1b): the system message carried the full rubric and the user
   message contained the actual transcript text.
 - **Grist write** — n8n POSTed
   `{records: [{fields: {Student, Phone, RunID, Score: 86, Verdict: "pass",

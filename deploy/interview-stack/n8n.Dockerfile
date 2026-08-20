@@ -4,7 +4,8 @@
 # is invisible to SigNoz. This adds the OTel SDK + auto-instrumentations and a
 # `--require` bootstrap so outbound HTTP spans (the grading call) are exported
 # to the OTLP collector.
-FROM n8nio/n8n:latest
+ARG N8N_VERSION=2.35.4
+FROM n8nio/n8n:${N8N_VERSION}
 
 USER root
 RUN npm install -g \
@@ -15,6 +16,7 @@ RUN npm install -g \
  && npm cache clean --force
 
 COPY n8n-otel/tracing.js /usr/local/lib/node_modules/tracing.js
+COPY n8n-bootstrap.js /usr/local/lib/n8n-bootstrap.js
 
 USER node
 

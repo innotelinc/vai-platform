@@ -38,7 +38,10 @@ services:
       interval: 3s
       timeout: 3s
       retries: 30
-      start_period: 30s
+      # Existing installations can spend several minutes in PostgreSQL crash
+      # recovery while fsyncing a large volume. Do not mark the stack failed
+      # during that normal cold-start window.
+      start_period: 900s
     networks:
       - app-network
 
@@ -295,7 +298,9 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 300s
+      # Importing the API's large Python/Pipecat dependency graph can take
+      # several minutes before uvicorn begins listening on a cold host.
+      start_period: 600s
     networks:
       - app-network
 
@@ -379,6 +384,14 @@ services:
     image: ${OLLAMA_IMAGE:-ollama/ollama:latest}
     container_name: ollama
     restart: unless-stopped
+    environment:
+      # CPU model loading can exceed Ollama's short request-time defaults on a
+      # cold volume. Keep the first load alive and avoid unloading between
+      # grading requests.
+      OLLAMA_LOAD_TIMEOUT: "${OLLAMA_LOAD_TIMEOUT:-10m}"
+      OLLAMA_KEEP_ALIVE: "${OLLAMA_KEEP_ALIVE:-10m}"
+      OLLAMA_MAX_LOADED_MODELS: "1"
+      OLLAMA_NUM_PARALLEL: "1"
     # Ollama is private to app-network; 9Router is the only LLM endpoint.
     volumes:
       - ollama_data:/root/.ollama
@@ -395,10 +408,10 @@ services:
     container_name: ollama_model
     restart: "no"
     entrypoint: ["/bin/sh", "-c"]
-    command: ["ollama pull $${OLLAMA_MODEL:-llama3.2}"]
+    command: ["ollama pull $${OLLAMA_MODEL:-llama3.2:1b}"]
     environment:
       OLLAMA_HOST: "http://ollama:11434"
-      OLLAMA_MODEL: "${OLLAMA_MODEL:-llama3.2}"
+      OLLAMA_MODEL: "${OLLAMA_MODEL:-llama3.2:1b}"
     depends_on:
       ollama:
         condition: service_healthy
@@ -434,6 +447,8 @@ services:
     build:
       context: ./deploy/interview-stack
       dockerfile: n8n.Dockerfile
+      args:
+        N8N_VERSION: "${N8N_VERSION:-2.35.4}"
     image: innotel-n8n-otel:local
     container_name: n8n
     restart: unless-stopped
@@ -444,13 +459,18 @@ services:
       N8N_PORT: 5678
       N8N_PROTOCOL: http
       N8N_EDITOR_BASE_URL: "${N8N_EDITOR_BASE_URL:-https://n8n.vai.innotel.us/}"
-      WEBHOOK_URL: "${N8N_WEBHOOK_URL:-https://n8n.vai.innotel.us/}"
+      N8N_WEBHOOK_URL: "${N8N_WEBHOOK_URL:-https://n8n.vai.innotel.us/}"
       N8N_SECURE_COOKIE: "false"
       N8N_DIAGNOSTICS_ENABLED: "false"
       N8N_PERSONALIZATION_ENABLED: "false"
-      # The grading workflow reads GRIST_DOC_ID in its URL expression. Keep
-      # n8n's env access explicit rather than relying on the 2.x default.
+      # The grading workflow reads these values in Code/HTTP Request nodes.
+      # Keep n8n's env access explicit rather than relying on the 2.x default.
       N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+      # n8n uses this Docker-internal origin for transcript downloads. The
+      # public URL in the webhook payload is retained for external consumers,
+      # but n8n must not hairpin through NPM/DNS to reach the API.
+      VAI_API_INTERNAL_URL: "${N8N_VAI_API_INTERNAL_URL:-http://api:8000}"
+      OLLAMA_MODEL: "${OLLAMA_MODEL:-llama3.2:1b}"
       GENERIC_TIMEZONE: "${N8N_TIMEZONE:-UTC}"
       N8N_USER_MANAGEMENT_JWT_SECRET: "${N8N_USER_MANAGEMENT_JWT_SECRET:-change-me-in-env}"
       OWNER_EMAIL: "${N8N_OWNER_EMAIL:-admin@localhost}"
@@ -466,7 +486,7 @@ services:
       # instance-ai module + locally-run sandbox (n8n-sandbox) + SearXNG search.
       # The model is served by the in-stack Ollama-compatible 9Router gateway.
       N8N_ENABLED_MODULES: "${N8N_ENABLED_MODULES:-instance-ai}"
-      N8N_INSTANCE_AI_MODEL: "${N8N_INSTANCE_AI_MODEL:-openai/llama3.2}"
+      N8N_INSTANCE_AI_MODEL: "${N8N_INSTANCE_AI_MODEL:-openai/llama3.2:1b}"
       N8N_INSTANCE_AI_MODEL_URL: "${N8N_INSTANCE_AI_MODEL_URL:-http://nine-router:20128/v1}"
       N8N_INSTANCE_AI_MODEL_API_KEY: "${N8N_INSTANCE_AI_MODEL_API_KEY:-ollama-local}"
       N8N_INSTANCE_AI_SANDBOX_ENABLED: "true"
@@ -482,7 +502,11 @@ services:
       - ./deploy/interview-stack/n8n-grader-workflow.json:/workflows/n8n-grader-workflow.json:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    entrypoint: ["tini", "--", "node"]
+    command: ["/usr/local/lib/n8n-bootstrap.js"]
     depends_on:
+      api:
+        condition: service_healthy
       sandbox-api:
         condition: service_healthy
       nine-router:
@@ -492,7 +516,9 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 45s
+      # n8n 2.x may spend several minutes migrating its persisted SQLite
+      # database before /healthz is available.
+      start_period: 600s
     networks: [app-network]
 
   # n8n AI Assistant sandbox stack (self-hosted; see docs.n8n.io …/set-up-ai-assistant).
@@ -581,24 +607,6 @@ services:
       SEARXNG_SECRET: "${SEARXNG_SECRET:-change-me-searxng-secret}"
     volumes:
       - ./deploy/interview-stack/searxng-settings.yml:/etc/searxng/settings.yml:ro
-    networks: [app-network]
-
-  n8n-import:
-    image: innotel-n8n-otel:local
-    container_name: n8n_import
-    restart: "no"
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - >-
-        n8n import:workflow --input=/workflows/n8n-grader-workflow.json &&
-        n8n publish:workflow --id=interview-grader-workflow &&
-        n8n update:workflow --id=interview-grader-workflow --active=true
-    depends_on:
-      n8n:
-        condition: service_healthy
-    volumes:
-      - n8n_data:/home/node/.n8n
-      - ./deploy/interview-stack/n8n-grader-workflow.json:/workflows/n8n-grader-workflow.json:ro
     networks: [app-network]
 
   grist:

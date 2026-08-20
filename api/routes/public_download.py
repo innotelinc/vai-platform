@@ -27,6 +27,11 @@ async def download_workflow_artifact(
     inline: bool = Query(
         default=False, description="Display inline in browser instead of download"
     ),
+    internal: bool = Query(
+        default=False,
+        include_in_schema=False,
+        description="Use the container-internal storage endpoint for trusted services",
+    ),
 ):
     """Download a workflow recording or transcript via public access token.
 
@@ -101,6 +106,7 @@ async def download_workflow_artifact(
             file_path=file_path,
             expiration=3600,  # 1 hour
             force_inline=inline,
+            use_internal_endpoint=internal,
         )
     except Exception as e:
         logger.error(f"Failed to generate signed URL: {e}")

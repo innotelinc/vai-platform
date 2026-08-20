@@ -14,7 +14,7 @@
 # The files in this directory that remain active are: clickhouse-config.yaml,
 # clickhouse-keeper.yaml, otel-collector-config.yaml (mounted by the root
 # compose), n8n.Dockerfile (builds the innotel-n8n-otel image), and
-# n8n-grader-workflow.json (imported by the root compose's n8n-import service).
+# n8n-grader-workflow.json (imported during the root n8n container's startup).
 #
 # ─────────────────────────────────────────────────────────────────────────────
 #  Self-hosted AI Mock-Interview Stack — Dograh + local TTS/LLM + n8n + Grist

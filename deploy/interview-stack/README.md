@@ -44,7 +44,7 @@ docker compose ps
 ```
 
 The first start downloads the Ollama image/model and the Whisper/Kokoro model
-assets. `ollama-model` pulls `OLLAMA_MODEL` (default `llama3.2`) before 9Router
+assets. `ollama-model` pulls `OLLAMA_MODEL` (default `llama3.2:1b`) before 9Router
 and n8n are marked ready. Do not expose port 11434 or 20128 through the router;
 only NPM-facing web services and PBX SIP/RTP should be externally reachable.
 
@@ -64,7 +64,7 @@ values from **inside the `api` container**:
 
 | Stage | Provider | Model | Base URL | Voice / language |
 |---|---|---|---|---|
-| LLM | `speaches` (OpenAI-compatible) | `llama3.2` | `http://nine-router:20128/v1` | — |
+| LLM | `speaches` (OpenAI-compatible) | `llama3.2:1b` | `http://nine-router:20128/v1` | — |
 | STT | `speaches` | `Systran/faster-distil-whisper-small.en` | `http://speaches:8000/v1` | `en` |
 | TTS | `speaches` | `kokoro` | `http://kokoro:8880/v1` | `af_heart` |
 
@@ -75,14 +75,15 @@ services do not authenticate requests. The API service must be able to resolve
 ## n8n grading and AI Assistant
 
 The root Compose file mounts `n8n-grader-workflow.json`, starts the n8n
-Community Edition container, imports and activates the workflow through the
-`n8n-import` one-shot service, and exports n8n HTTP spans to SigNoz.
+Community Edition container, imports and activates the workflow during n8n startup, before the n8n server
+process begins, and exports n8n HTTP spans to SigNoz.
 
 The grading path is:
 
 ```text
 Dograh Webhook
-  -> fetch transcript URL
+  -> rewrite the public transcript URL to http://api:8000 inside Docker
+  -> fetch transcript from the vai API
   -> 9Router /v1/chat/completions
   -> parse strict JSON rubric result
   -> Grist Interviews table
@@ -95,9 +96,16 @@ The n8n AI Assistant is local as well:
 - SearXNG supplies the assistant's web-search endpoint;
 - none of the sandbox, runner, or SearXNG ports are published to the host.
 
-Check `docker compose logs n8n n8n-import nine-router ollama-model` if the
+Check `docker compose logs n8n nine-router ollama-model` if the
 workflow is not visible or the Assistant reports that its model is unavailable.
-The import service is intentionally not allowed to hide workflow import errors.
+Workflow import and publish errors fail n8n startup instead of being hidden.
+The n8n container waits for the API health check before starting, and transcript
+fetches use `N8N_VAI_API_INTERNAL_URL` (default `http://api:8000`) to avoid
+routing an internal request back through NPM. The workflow also marks the
+public-download request as internal, so the API redirects it to Docker-internal
+MinIO instead of sending n8n back through the public storage hostname. The
+incoming public URL is still used as the source path, so this works with either
+`api.vai.innotel.us` or the main UI host.
 
 ### Grist bootstrap
 
@@ -113,7 +121,7 @@ The workflow writes to:
 `POST /api/docs/<GRIST_DOC_ID>/tables/Interviews/records`.
 For a single-user Grist install, create the document from the Grist UI at
 `http://localhost:8484` (or `https://grist.vai.innotel.us`) and put its ID in
-`.env` before restarting `n8n-import`. This is the only one-time UI setup;
+`.env` before restarting n8n. This is the only one-time UI setup;
 rows are written automatically afterward.
 
 ## PBX wiring
@@ -155,7 +163,7 @@ curl -fsS http://127.0.0.1:8484/ -o /dev/null
 # LLM through 9Router
 curl -fsS http://127.0.0.1:20128/v1/chat/completions \
   -H 'Content-Type: application/json' \
-  -d '{"model":"llama3.2","messages":[{"role":"user","content":"Reply with OK"}],"stream":false}'
+  -d '{"model":"llama3.2:1b","messages":[{"role":"user","content":"Reply with OK"}],"stream":false}'
 
 # TTS and STT round trip
 curl -fsS http://127.0.0.1:8880/v1/audio/speech \
