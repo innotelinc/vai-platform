@@ -138,7 +138,8 @@ return [{
 Create the `Interviews` table in Grist first (columns: Student, Phone, RunID,
 Score, Verdict, Dimensions, Strengths, Improvements, Transcript).
 
-**NocoDB alternative:** `POST http://nocodb:8080/api/v2/meta/tables/<TABLE_ID>/records`
+**NocoDB alternative:** start it with `docker compose --profile nocodb up -d`
+(host port 8080), then `POST http://nocodb:8080/api/v2/meta/tables/<TABLE_ID>/records`
 with header `xc-auth: <token>` and the same fields as a flat JSON object.
 
 ---

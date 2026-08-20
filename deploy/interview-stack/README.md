@@ -12,7 +12,12 @@ open-source; nothing calls a paid SaaS.
 | OmniRoute          | http://127.0.0.1:20128        | OpenAI-compatible LLM gateway (model "auto") |
 | n8n                | http://localhost:5678         | Hang-up webhook → grading workflow      |
 | Grist              | http://localhost:8484         | Student / transcript / score dashboard  |
+| NocoDB (opt-in)    | http://localhost:8080         | Alternative dashboard — profile `nocodb` |
 | SigNoz             | http://localhost:3301         | OTel traces + pipeline latency (ClickHouse) |
+
+> Grist is the default dashboard. To also run the NocoDB alternative:
+> `docker compose --profile nocodb up -d`, then point the grading workflow's
+> last node at the NocoDB API (see `n8n-interview-grader.md`).
 
 ## Networking model (important)
 
