@@ -86,15 +86,21 @@ dograh Webhook node ──POST──▶ n8n Webhook trigger
 > the model emits JSON from the prompt alone, so the same body works across any
 > OpenAI-compatible gateway (OmniRoute, Ollama, vLLM, …).
 
-> **OmniRoute specifics (verified in a live trace):**
-> - OmniRoute **streams by default** (SSE `data:` chunks) even without
->   `stream: true`, and the parse node expects a plain JSON body — the request
->   must send `"stream": false`.
-> - `model: "auto"` routes to free-tier providers that can be temporarily
->   unavailable (401/429/400 from `oc/…`, `felo/…`, etc.), which OmniRoute
->   surfaces as HTTP 400 → "Bad request - please check your parameters". For
->   reliable grading, configure a provider API key in the OmniRoute dashboard
->   (port 20128) or pin a specific model id that works (e.g. `hy3-free`).
+> **Gateway specifics (verified in a live trace):**
+> - The request must send `"stream": false`; otherwise compatible gateways may
+>   return SSE chunks instead of the plain JSON body the parse node expects.
+> - The grading node adds `Authorization: Bearer $OMNIROUTE_API_KEY` when that
+>   environment variable is set. This is required for a keyed host 9Router and
+>   harmlessly omitted for an unauthenticated OmniRoute container.
+> - For a fully local path, configure 9Router's `ollama-local` provider against
+>   `http://127.0.0.1:11434`, add `ollama-local/llama3.2:latest` to the active
+>   combo, and set the `auto` alias to that model. The verified host gateway
+>   returned `model: llama3.2:latest` and completed the grade locally.
+> - The workflow sets `max_tokens: 2048` and repairs common truncated JSON and
+>   markdown fences before falling back to a failed grade. Small CPU models can
+>   otherwise stop mid-object.
+> - Transcript downloads should return plain text. The workflow also accepts
+>   n8n's `{ data: "..." }` wrapper or a JSON object with a `transcript` field.
 > - The workflow reads `GRIST_DOC_ID` via `$env` — n8n 2.x denies env access in
 >   expressions by default, so the compose sets `N8N_BLOCK_ENV_ACCESS_IN_NODE=false`.
 
@@ -102,10 +108,17 @@ dograh Webhook node ──POST──▶ n8n Webhook trigger
 
 ```js
 // n8n Code node (JS)
-const raw = $json.choices[0].message.content;
+let raw = String($json.choices[0].message.content || '').trim();
+raw = raw.replace(/^```[a-z]*\n?/i, '').replace(/\n?```\s*$/, '');
 let grade;
 try { grade = JSON.parse(raw); }
-catch (e) { grade = { parse_error: raw }; }
+catch (e) {
+  grade = null;
+  for (const closer of ['}', ']', '}', ']', '"']) {
+    try { grade = JSON.parse(raw + closer); if (grade) break; } catch (_) {}
+  }
+  if (!grade) grade = { overall_score: 0, verdict: 'fail', parse_error: raw };
+}
 return [{
   json: {
     run_id:         $('Webhook').item.json.body.run_id,
@@ -279,14 +292,19 @@ Three n8n gotchas surfaced and fixed in the verified workflow:
    object — Grist rejects the object with 400 "Invalid payload".
 3. `$env` access in expressions is **denied by default in n8n 2.x** — the
    compose sets `N8N_BLOCK_ENV_ACCESS_IN_NODE=false` so the Grist URL can read
-   `GRIST_DOC_ID`.
+   `GRIST_DOC_ID` and the grading node can read `OMNIROUTE_API_KEY`.
+4. Small local models can stop with a syntactically incomplete JSON object even
+   when the HTTP response is successful. The workflow requests `max_tokens: 2048`
+   and attempts delimiter repair before recording a failed parse.
+5. A JSON transcript response must be normalized to its text value; passing the
+   `{data: ...}` wrapper or an object directly to Grist causes 400 `Invalid payload`.
 
 > Verified end-to-end on 2026-08-20 against the real stack (n8n 2.x, Grist,
-> kokoro-fastapi, speaches, OmniRoute): webhook → transcript fetch → grading
-> call → parse → Grist row landed (Score 86 / pass) with the transcript text
-> stored in the row. The grading node was pointed at an OpenAI-compatible
-> stand-in because OmniRoute's `auto` free-tier providers were intermittently
-> rate-limited; the request shape (including `stream: false`) is identical.
+> host 9Router on `20128`, and local Ollama): webhook → transcript fetch →
+> keyed `model: auto` grading → parse → Grist row landed successfully
+> (`host-gw-trace-006`, Score 83 / pass) with the transcript text stored in the
+> row. The gateway reported `model: llama3.2:latest`; execution 24 completed
+> successfully in about 43 seconds.
 
 To re-run the verification: start `verify_chain.py` (or the `verify-chain-mock`
 container), ensure n8n has the workflow active, and POST a payload with a
