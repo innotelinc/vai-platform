@@ -81,9 +81,9 @@ dograh Webhook node ──POST──▶ n8n Webhook trigger
 }
 ```
 
-> The workflow intentionally omits `response_format`: Ollama's OpenAI-compatible
-> endpoint has varied support for that OpenAI-only field. The rubric demands
-> strict JSON in the prompt, and the parser also tolerates fenced JSON.
+> The workflow sends `response_format: {type: "json_object"}` so Ollama's
+> OpenAI-compatible endpoint constrains sampling to valid JSON. The parser also
+> tolerates fenced JSON and repairs a truncated trailing brace as a fallback.
 
 ## Node 3b — Code node: parse the grade
 
