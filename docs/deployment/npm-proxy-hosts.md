@@ -168,7 +168,7 @@ router:
 | `9000`, `9001` | MinIO API + console |
 | `8880` | kokoro-fastapi (TTS) |
 | `8001` | speaches (STT) |
-| `20128` | 9Router (LLM) |
+| `20128` | OmniRoute (LLM gateway) |
 | `4317`, `4318` | SigNoz OTel ingest (gRPC/HTTP) |
 | `8888`, `8889` | otel-collector metrics |
 | `19000`, `8123` | ClickHouse (native/HTTP) |

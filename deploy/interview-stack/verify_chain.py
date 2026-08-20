@@ -2,7 +2,7 @@
 """
 Stand-in servers to verify the n8n grader chain WITHOUT the real stack.
 
-  :20128  OpenAI-compatible POST /v1/chat/completions   (9Router mock)
+  :20128  OpenAI-compatible POST /v1/chat/completions   (OmniRoute mock)
   :8484   GET  /api/v1/public/download/workflow/<t>/transcript  (dograh stand-in)
           POST /api/docs/*/tables/Interviews/records            (Grist mock)
 
@@ -98,6 +98,6 @@ def serve(port):
 
 
 if __name__ == "__main__":
-    print("verify_chain: 20128 (9Router) + 8484 (transcript/Grist) — Ctrl-C to stop", flush=True)
+    print("verify_chain: 20128 (OmniRoute) + 8484 (transcript/Grist) — Ctrl-C to stop", flush=True)
     threading.Thread(target=serve, args=(20128,), daemon=True).start()
     serve(8484)

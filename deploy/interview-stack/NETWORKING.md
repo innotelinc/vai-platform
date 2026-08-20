@@ -83,7 +83,7 @@ are only reachable by dograh (host mode → `127.0.0.1`) or by other containers.
 | 9000, 9001       | minio API + console            |
 | 8880             | kokoro-fastapi (TTS)           |
 | 8001             | speaches (STT)                 |
-| 20128            | 9Router (LLM)                  |
+| 20128            | OmniRoute (LLM gateway)        |
 | 8088 (+8089 if used) | Asterisk ARI (PBX side; NPM forwards `ari.voice.innotel.us`) |
 | 3300             | SigNoz query-service API       |
 | 4317, 4318       | SigNoz OTel ingest (gRPC/HTTP) |
@@ -104,7 +104,7 @@ are only reachable by dograh (host mode → `127.0.0.1`) or by other containers.
 student phone ──SIP 5060 / RTP 10000-20000──▶ Asterisk (PBX)
 Asterisk ──ARI REST+WS (8088)──▶ dograh        (dograh dials out to the PBX)
 Asterisk ──media WS──▶ dograh :8000 /api/v1/telephony/ws/ari   (Asterisk dials out)
-dograh   ──localhost──▶ 9Router :20128, kokoro :8880, speaches :8001
+dograh   ──localhost──▶ OmniRoute :20128, kokoro :8880, speaches :8001
 dograh   ──LAN──▶ n8n :5678 (webhook), n8n ──LAN──▶ dograh :8000 (transcript)
 ```
 

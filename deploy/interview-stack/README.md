@@ -9,7 +9,7 @@ open-source; nothing calls a paid SaaS.
 | postgres / redis / minio | 5432 / 6379 / 9000      | dograh's own DB, cache, object storage  |
 | kokoro-fastapi     | http://127.0.0.1:8880         | Local TTS (Kokoro-82M, OpenAI-compatible) |
 | speaches           | http://127.0.0.1:8001         | Local STT (faster-whisper, OpenAI-compatible) |
-| 9Router            | http://127.0.0.1:20128        | OpenAI-compatible LLM router/failover  |
+| OmniRoute          | http://127.0.0.1:20128        | OpenAI-compatible LLM gateway (model "auto") |
 | n8n                | http://localhost:5678         | Hang-up webhook → grading workflow      |
 | Grist              | http://localhost:8484         | Student / transcript / score dashboard  |
 | SigNoz             | http://localhost:3301         | OTel traces + pipeline latency (ClickHouse) |
@@ -19,9 +19,9 @@ open-source; nothing calls a paid SaaS.
 - `dograh-api` uses `network_mode: host` so it can bind ARI media sockets and
   reach the PBX on loopback. It reaches every other service via the host's
   published ports: **127.0.0.1:8001** (STT), **127.0.0.1:8880** (TTS),
-  **127.0.0.1:20128** (LLM), **127.0.0.1:4318** (OTel).
+  **127.0.0.1:20128** (LLM gateway), **127.0.0.1:4318** (OTel).
 - Everything else is on the `interview-net` bridge and talks by service name.
-- Containers that must call back into host-mode dograh (or a host-run 9Router)
+- Containers that must call back into host-mode dograh (or OmniRoute)
   use `host.docker.internal` (enabled via `extra_hosts: host-gateway`).
 
 ## Quick start
@@ -62,20 +62,20 @@ OpenAI-compatible client that forwards `base_url` to whatever local server is
 behind it). No code changes are needed — the provider, config schema, and
 `service_factory.py` branches already ship in dograh.
 
-| Setting  | LLM (Ollama)                         | STT (speaches)                       | TTS (kokoro-fastapi)             |
+| Setting  | LLM (OmniRoute)                      | STT (speaches)                       | TTS (kokoro-fastapi)             |
 |----------|--------------------------------------|--------------------------------------|----------------------------------|
 | provider | speaches                             | speaches                             | speaches                         |
-| model    | llama3.2                             | Systran/faster-distil-whisper-small.en | kokoro                         |
+| model    | auto                                 | Systran/faster-distil-whisper-small.en | kokoro                         |
 | voice    | —                                    | —                                    | af_heart (or am_michael, ...)    |
 | language | —                                    | en                                   | —                                |
-| base_url | http://192.168.1.63:11434/v1         | http://speaches:8000/v1              | http://kokoro:8880/v1            |
+| base_url | http://192.168.1.63:20128/v1         | http://speaches:8000/v1              | http://kokoro:8880/v1            |
 | api_key  | (blank — self-hosted)                | (blank — self-hosted)                | (blank — self-hosted)            |
 
 > The table's `base_url` values are the **production** URLs as seen from the
 > `vai-api-1` container (which joins the interview-stack bridge and reaches
-> speaches/kokoro by service name, Ollama on the host LAN IP). For the
+> speaches/kokoro by service name, OmniRoute on the host LAN IP). For the
 > host-mode `dograh-api` in this compose, use `http://127.0.0.1:8001/v1` (STT),
-> `http://127.0.0.1:8880/v1` (TTS), and `http://192.168.1.63:11434/v1` (LLM)
+> `http://127.0.0.1:8880/v1` (TTS), and `http://127.0.0.1:20128/v1` (LLM)
 > instead.
 
 **TTS note:** `SpeachesTTSService` (pipecat) already passes provider-specific
@@ -85,39 +85,39 @@ voices work without the earlier `kokoro_tts.py` shim. That shim was removed.
 > Note: `validate_user_configured_service_url` allows localhost URLs because
 > `DEPLOYMENT_MODE` defaults to `oss`. The compose sets it explicitly.
 
-## Local LLM: Ollama (host-installed, llama3.2)
+## LLM gateway: OmniRoute (Docker, OpenAI-compatible on 20128)
 
-The LLM runs as a **host process** (not a container) so it doesn't need the
-~3 GB Ollama docker image on the already-tight 32 GB root disk — just the
-binary (~1.4 GB) plus the model. Install once:
+OmniRoute (github.com/diegosouzapw/OmniRoute, MIT) is the LLM gateway — it
+replaces the old 9Router / host-Ollama path with one OpenAI-compatible endpoint
+on **20128**. `model: "auto"` routes every request across its free / connected
+providers with automatic failover — zero config out of the box. The dashboard
+lives on the same port: `http://localhost:20128` (first login uses
+`OMNIROUTE_INITIAL_PASSWORD` from `.env`).
 
 ```bash
-apt-get install -y zstd                       # the ollama installer needs zstd
-curl -fsSL https://ollama.com/install.sh | sh # binary + ollama.service (systemd)
-mkdir -p /etc/systemd/system/ollama.service.d
-printf '[Service]\nEnvironment=OLLAMA_HOST=0.0.0.0\n' \
-  > /etc/systemd/system/ollama.service.d/override.conf  # reachable from docker
-systemctl daemon-reload && systemctl restart ollama
-ollama pull llama3.2                          # ~2 GB, CPU-only
+curl -s http://127.0.0.1:20128/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"auto","messages":[{"role":"user","content":"Say hello"}]}'
 ```
 
-Ollama serves an OpenAI-compatible API at `http://192.168.1.63:11434/v1`
-(bound to all interfaces so the api and n8n containers can reach it; the host
-firewall should still block 11434 from outside the LAN). Point dograh's LLM
-at it in the UI:
+Point dograh's LLM at it in the UI:
 
 | Setting  | Value |
 |----------|-------|
 | provider | speaches |
-| model    | `llama3.2` |
-| base_url | `http://192.168.1.63:11434/v1` |
+| model    | `auto` (or a specific provider/model, e.g. `felo/…`, `oc/…`) |
+| base_url | `http://127.0.0.1:20128/v1` (host-mode dograh) |
 | api_key  | (blank — self-hosted) |
 
-n8n's grading node uses the same base URL with `model: llama3.2`.
+n8n's grading node uses the same base URL with `model: auto`.
 
-> CPU-only: no GPU on this box, so llama3.2 (3B) runs on CPU — fine for the
-> post-call grading step, slow for real-time agent turns. To move to a GPU box
-> later, point `base_url` at that host's 11434 instead.
+> **Internet / privacy note:** OmniRoute's `auto` model routes to free-tier
+> **cloud** providers (OpenCode Free, Felo, …) — that hop needs internet and
+> sends the transcript off-box. For a fully-local LLM, add your own Ollama /
+> llama.cpp / vLLM as a provider in the OmniRoute dashboard and route to it
+> (the `auto` combo then prefers it). The compose pins secrets in `.env`
+> (`OMNIROUTE_JWT_SECRET`, `OMNIROUTE_API_KEY_SECRET`, `OMNIROUTE_INITIAL_PASSWORD`,
+> `OMNIROUTE_WS_BRIDGE_SECRET`).
 
 ## Observability wiring (SigNoz)
 
@@ -221,10 +221,10 @@ curl -s http://127.0.0.1:8001/v1/audio/transcriptions \
   -F model=Systran/faster-distil-whisper-small.en \
   -F language=en
 
-# 4. LLM round-trip through 9Router (OpenAI-compatible)
+# 4. LLM round-trip through OmniRoute (OpenAI-compatible, model "auto")
 curl -s http://127.0.0.1:20128/v1/chat/completions \
   -H 'Content-Type: application/json' \
-  -d '{"model":"<model>","messages":[{"role":"user","content":"Say hello"}]}'
+  -d '{"model":"auto","messages":[{"role":"user","content":"Say hello"}]}'
 
 # 5. SigNoz ingest
 curl -s http://127.0.0.1:4318/v1/traces -o /dev/null -w '%{http_code}\n'   # expect 200 (rejects bad payload, accepts OTLP)
@@ -235,18 +235,21 @@ curl -s http://127.0.0.1:5678/healthz
 curl -s http://127.0.0.1:8484 -o /dev/null -w '%{http_code}\n'
 ```
 
-> **100% offline:** with speaches (STT), 9Router (LLM) and kokoro-fastapi (TTS)
-> the whole media pipeline runs locally. The only internet access is a one-time
-> model download on first start (Whisper + Kokoro), cached in the
-> `speaches_models` / `kokoro_models` volumes — after that, disconnect and it
-> still works.
+> **Mostly offline:** speaches (STT), kokoro-fastapi (TTS) and the media
+> pipeline run fully locally; the only one-time internet access is the model
+> download on first start (Whisper + Kokoro), cached in the volumes. The LLM
+> is the exception — OmniRoute's `auto` model routes to free-tier **cloud**
+> providers, so that hop needs internet unless you add a local Ollama/vLLM as
+> a provider in the OmniRoute dashboard.
 
 ### Known caveats / verify before relying on them
 
-- **9Router image** — I could not reach the web to confirm the exact image /
-  interface while writing this. It's behind a `nine-router` compose profile.
-  If it runs on the host, delete that service; dograh still reaches it at
-  `127.0.0.1:20128` and n8n at `host.docker.internal:20128`.
+- **OmniRoute image / secrets** — `diegosouzapw/omniroute:latest` requires
+  `JWT_SECRET`, `API_KEY_SECRET`, `INITIAL_PASSWORD` and
+  `OMNIROUTE_WS_BRIDGE_SECRET` (set real random values in `.env`; the dashboard
+  on :20128 uses `INITIAL_PASSWORD` at first login). `model: auto` routes to
+  free-tier cloud providers — for a fully-local LLM add your Ollama/vLLM as a
+  provider in the dashboard.
 - **kokoro-fastapi image tag** — `remarker/kokoro-fastapi:latest` (CPU) and
   `-cuda` (GPU) are the published tags; confirm they still exist on Docker Hub.
 - **SigNoz versions** — the compose pins the v0.138 "Foundry" topology
