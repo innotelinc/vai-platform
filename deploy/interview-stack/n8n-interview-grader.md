@@ -74,7 +74,7 @@ dograh Webhook node ──POST──▶ n8n Webhook trigger
 {
   "model": "auto",
   "temperature": 0.2,
-  "response_format": { "type": "json_object" },
+  "stream": false,
   "messages": [
     { "role": "system", "content": "{{ $('System Prompt').item.json.prompt }}" },
     { "role": "user", "content": "STUDENT: {{ $('Set transcript').item.json.student_name }}\n\nINTERVIEW TRANSCRIPT:\n{{ $('Set transcript').item.json.transcript }}" }
@@ -85,6 +85,18 @@ dograh Webhook node ──POST──▶ n8n Webhook trigger
 > The workflow omits `response_format` — the rubric demands strict JSON and
 > the model emits JSON from the prompt alone, so the same body works across any
 > OpenAI-compatible gateway (OmniRoute, Ollama, vLLM, …).
+
+> **OmniRoute specifics (verified in a live trace):**
+> - OmniRoute **streams by default** (SSE `data:` chunks) even without
+>   `stream: true`, and the parse node expects a plain JSON body — the request
+>   must send `"stream": false`.
+> - `model: "auto"` routes to free-tier providers that can be temporarily
+>   unavailable (401/429/400 from `oc/…`, `felo/…`, etc.), which OmniRoute
+>   surfaces as HTTP 400 → "Bad request - please check your parameters". For
+>   reliable grading, configure a provider API key in the OmniRoute dashboard
+>   (port 20128) or pin a specific model id that works (e.g. `hy3-free`).
+> - The workflow reads `GRIST_DOC_ID` via `$env` — n8n 2.x denies env access in
+>   expressions by default, so the compose sets `N8N_BLOCK_ENV_ACCESS_IN_NODE=false`.
 
 ## Node 3b — Code node: parse the grade
 
@@ -257,12 +269,24 @@ aren't part of the live dograh dev stack:
   Dimensions, Strengths, Improvements, Transcript}}]}` and the stand-in
   accepted the row.
 
-Two n8n gotchas surfaced and fixed in the verified workflow:
+Three n8n gotchas surfaced and fixed in the verified workflow:
 
 1. HTTP Request v4.x **ignores `jsonBody` unless `specifyBody: "json"`** is set
    (defaults to keypair → sends `{"":""}`).
 2. A text response arrives at the next node as **`{ data: "..." }`**, not a
-   bare string — read `item.json.data`.
+   bare string — read `item.json.data`. The Save-to-Grist payload must pass
+   that extracted **string** (`item.json.data || item.json`), not the wrapper
+   object — Grist rejects the object with 400 "Invalid payload".
+3. `$env` access in expressions is **denied by default in n8n 2.x** — the
+   compose sets `N8N_BLOCK_ENV_ACCESS_IN_NODE=false` so the Grist URL can read
+   `GRIST_DOC_ID`.
+
+> Verified end-to-end on 2026-08-20 against the real stack (n8n 2.x, Grist,
+> kokoro-fastapi, speaches, OmniRoute): webhook → transcript fetch → grading
+> call → parse → Grist row landed (Score 86 / pass) with the transcript text
+> stored in the row. The grading node was pointed at an OpenAI-compatible
+> stand-in because OmniRoute's `auto` free-tier providers were intermittently
+> rate-limited; the request shape (including `stream: false`) is identical.
 
 To re-run the verification: start `verify_chain.py` (or the `verify-chain-mock`
 container), ensure n8n has the workflow active, and POST a payload with a
