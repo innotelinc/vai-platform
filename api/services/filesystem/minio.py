@@ -10,6 +10,23 @@ from minio.error import S3Error
 from .base import AsyncReadable, BaseFileSystem
 
 
+def _content_type_for_path(file_path: str) -> str:
+    """Map a storage key's extension to a content type for object uploads.
+
+    MinIO derives the Content-Type from the extension when none is supplied,
+    but only for a limited set; unknown extensions default to
+    application/octet-stream, which makes HTTP consumers treat the body as
+    binary. Transcripts and CSV exports must come back as text.
+    """
+    ext = (file_path.rsplit(".", 1)[-1] if "." in file_path else "").lower()
+    return {
+        "txt": "text/plain; charset=utf-8",
+        "csv": "text/csv; charset=utf-8",
+        "json": "application/json",
+        "wav": "audio/wav",
+    }.get(ext, "application/octet-stream")
+
+
 class MinioFileSystem(BaseFileSystem):
     """MinIO implementation of the filesystem interface for OSS users.
 
@@ -96,11 +113,17 @@ class MinioFileSystem(BaseFileSystem):
 
             def _put():
                 # The MinIO SDK requires a stream with .read(), not raw bytes.
+                # Content type follows the file extension so text artifacts
+                # (transcripts, CSVs) are served as text — n8n's HTTP node
+                # otherwise treats an octet-stream response as binary and
+                # downstream consumers read garbage.
+                content_type = _content_type_for_path(file_path)
                 self.client.put_object(
                     self.bucket_name,
                     file_path,
                     data=io.BytesIO(data),
                     length=len(data),
+                    content_type=content_type,
                 )
 
             await asyncio.to_thread(_put)

@@ -389,7 +389,10 @@ services:
       # cold volume. Keep the first load alive and avoid unloading between
       # grading requests.
       OLLAMA_LOAD_TIMEOUT: "${OLLAMA_LOAD_TIMEOUT:-10m}"
-      OLLAMA_KEEP_ALIVE: "${OLLAMA_KEEP_ALIVE:-10m}"
+      # Keep the 1b model resident between grades: unloading after a short
+      # idle window forces a cold reload (minutes on a CPU host) that can
+      # exceed n8n's request timeout. 1h is fine on this model's ~1.5GB.
+      OLLAMA_KEEP_ALIVE: "${OLLAMA_KEEP_ALIVE:-60m}"
       OLLAMA_MAX_LOADED_MODELS: "1"
       OLLAMA_NUM_PARALLEL: "1"
     # Ollama is private to app-network; 9Router is the only LLM endpoint.

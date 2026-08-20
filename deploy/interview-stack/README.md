@@ -109,22 +109,29 @@ incoming public URL is still used as the source path, so this works with either
 
 ### Grist bootstrap
 
-Create a Grist document whose ID is in `GRIST_DOC_ID` and create a table named
-`Interviews` with these columns:
+Create a Grist document whose ID is in `GRIST_DOC_ID`, generate the admin
+user's API key (Grist → Profile → API) and put it in `.env` as `GRIST_API_KEY`,
+and create the `Interviews` table. The only manual step is creating the document
+and API key from the Grist UI at `http://localhost:8484` (or
+`https://grist.vai.innotel.us`); everything else is scripted:
 
-```text
-Student, Phone, RunID, Score, Verdict, Dimensions, Strengths,
-Improvements, Transcript
+```bash
+source .env
+python3 deploy/interview-stack/grist_setup_dashboard.py
 ```
+
+`grist_setup_dashboard.py` is idempotent: it creates the `Interviews` table
+(`Student, Phone, RunID, Score, Verdict, Dimensions, Strengths, Improvements,
+Transcript`) if missing and builds a **Dashboard** page with a summary table
+grouped by `Verdict` (count + average score) and a verdict-distribution pie
+chart. Re-run it after a fresh install; it only issues the actions needed to
+reach the desired state.
 
 The workflow writes to:
 `POST /api/docs/<GRIST_DOC_ID>/tables/Interviews/records`.
-For a single-user Grist install, create the document from the Grist UI at
-`http://localhost:8484` (or `https://grist.vai.innotel.us`) and put its ID in
-`.env` before restarting n8n. Generate the admin user's API key (Grist →
-Profile → API) and put it in `.env` as `GRIST_API_KEY`; the grader sends it as a
-Bearer token so the transcript table can stay private. This is the only
-one-time UI setup; rows are written automatically afterward.
+The grader sends `GRIST_API_KEY` as a Bearer token so the transcript table can
+stay private. Put the doc ID in `.env` before restarting n8n; rows are written
+automatically afterward.
 
 ## PBX wiring
 

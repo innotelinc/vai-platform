@@ -7,6 +7,21 @@ from botocore.exceptions import ClientError
 from .base import AsyncReadable, BaseFileSystem
 
 
+def _content_type_for_path(file_path: str) -> str:
+    """Map a storage key's extension to a content type for object uploads.
+
+    Keeps text artifacts (transcripts, CSVs) served as text so HTTP consumers
+    (e.g. n8n's HTTP Request node) parse the body as text rather than binary.
+    """
+    ext = (file_path.rsplit(".", 1)[-1] if "." in file_path else "").lower()
+    return {
+        "txt": "text/plain; charset=utf-8",
+        "csv": "text/csv; charset=utf-8",
+        "json": "application/json",
+        "wav": "audio/wav",
+    }.get(ext, "application/octet-stream")
+
+
 class S3FileSystem(BaseFileSystem):
     """S3 implementation of the filesystem interface."""
 
@@ -61,7 +76,10 @@ class S3FileSystem(BaseFileSystem):
         try:
             async with self.session.client("s3", **self._client_kwargs()) as s3_client:
                 await s3_client.put_object(
-                    Bucket=self.bucket_name, Key=file_path, Body=await content.read()
+                    Bucket=self.bucket_name,
+                    Key=file_path,
+                    Body=await content.read(),
+                    ContentType=_content_type_for_path(file_path),
                 )
             return True
         except ClientError:
