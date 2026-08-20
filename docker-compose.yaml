@@ -427,6 +427,9 @@ services:
       N8N_SECURE_COOKIE: "false"
       N8N_DIAGNOSTICS_ENABLED: "false"
       N8N_PERSONALIZATION_ENABLED: "false"
+      # The Interview Grader workflow reads GRIST_DOC_ID via $env; n8n 2.x
+      # denies env access in expressions unless this is explicitly enabled.
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
       GENERIC_TIMEZONE: "${N8N_TIMEZONE:-UTC}"
       N8N_USER_MANAGEMENT_JWT_SECRET: "${N8N_USER_MANAGEMENT_JWT_SECRET:-change-me-in-env}"
       OWNER_EMAIL: "${N8N_OWNER_EMAIL:-admin@localhost}"
