@@ -35,6 +35,15 @@ if all([LANGFUSE_HOST, LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY]) and not (
         "(/project/<project_id>/...) or via GET <host>/api/public/projects."
     )
 
+# Grist interview grading store. The n8n grader writes interview results here;
+# these credentials let the API surface them to the UI without exposing Grist
+# (see deploy/interview-stack/README.md). GRIST_BASE_URL is the Docker-internal
+# address; GRIST_PUBLIC_URL is what browsers should use when embedding Grist.
+GRIST_BASE_URL = os.getenv("GRIST_BASE_URL", "http://grist:8484").rstrip("/")
+GRIST_PUBLIC_URL = os.getenv("GRIST_PUBLIC_URL", "http://localhost:8484").rstrip("/")
+GRIST_API_KEY = os.getenv("GRIST_API_KEY", "")
+GRIST_DOC_ID = os.getenv("GRIST_DOC_ID", "")
+
 # URLs for deployment
 #
 # PUBLIC_BASE_URL is the single canonical origin a deployment is reached at

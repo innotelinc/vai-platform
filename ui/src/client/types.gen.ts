@@ -3512,6 +3512,97 @@ export type InitiateCallRequest = {
 };
 
 /**
+ * InterviewResult
+ *
+ * One graded interview row from the Grist Interviews table.
+ */
+export type InterviewResult = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Student
+     */
+    student: string | null;
+    /**
+     * Phone
+     */
+    phone: string | null;
+    /**
+     * Run Id
+     */
+    run_id: string | null;
+    /**
+     * Score
+     */
+    score: number | null;
+    /**
+     * Verdict
+     */
+    verdict: string | null;
+    /**
+     * Dimensions
+     */
+    dimensions: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Strengths
+     */
+    strengths: Array<string> | null;
+    /**
+     * Improvements
+     */
+    improvements: Array<string> | null;
+    /**
+     * Transcript
+     */
+    transcript: string | null;
+};
+
+/**
+ * InterviewsResponse
+ */
+export type InterviewsResponse = {
+    /**
+     * Configured
+     */
+    configured: boolean;
+    summary: InterviewsSummary;
+    /**
+     * Interviews
+     */
+    interviews: Array<InterviewResult>;
+};
+
+/**
+ * InterviewsSummary
+ */
+export type InterviewsSummary = {
+    /**
+     * Total
+     */
+    total: number;
+    /**
+     * Pass Count
+     */
+    pass_count: number;
+    /**
+     * Review Count
+     */
+    review_count: number;
+    /**
+     * Fail Count
+     */
+    fail_count: number;
+    /**
+     * Average Score
+     */
+    average_score: number | null;
+};
+
+/**
  * Inworld
  *
  * Inworld AI streaming text-to-speech with built-in and cloned voices. Defaults to the Ashley system voice on inworld-tts-2.
@@ -15304,6 +15395,45 @@ export type GetNodeTypeApiV1NodeTypesNameGetResponses = {
 };
 
 export type GetNodeTypeApiV1NodeTypesNameGetResponse = GetNodeTypeApiV1NodeTypesNameGetResponses[keyof GetNodeTypeApiV1NodeTypesNameGetResponses];
+
+export type ListInterviewsApiV1InterviewsGetData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/interviews';
+};
+
+export type ListInterviewsApiV1InterviewsGetErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListInterviewsApiV1InterviewsGetError = ListInterviewsApiV1InterviewsGetErrors[keyof ListInterviewsApiV1InterviewsGetErrors];
+
+export type ListInterviewsApiV1InterviewsGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: InterviewsResponse;
+};
+
+export type ListInterviewsApiV1InterviewsGetResponse = ListInterviewsApiV1InterviewsGetResponses[keyof ListInterviewsApiV1InterviewsGetResponses];
 
 export type HealthApiV1HealthGetData = {
     body?: never;

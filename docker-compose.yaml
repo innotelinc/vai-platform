@@ -280,6 +280,14 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://signoz-otel-collector:4318}"
       OTEL_EXPORTER_OTLP_PROTOCOL: "${OTEL_EXPORTER_OTLP_PROTOCOL:-http/protobuf}"
 
+      # Grist interview grading store (same doc the n8n grader writes to). The
+      # API reads it server-side to surface interview results in the UI without
+      # exposing Grist credentials to the browser.
+      GRIST_BASE_URL: "${GRIST_BASE_URL:-http://grist:8484}"
+      GRIST_PUBLIC_URL: "${GRIST_PUBLIC_URL:-http://localhost:8484}"
+      GRIST_DOC_ID: "${GRIST_DOC_ID:-interview-grader}"
+      GRIST_API_KEY: "${GRIST_API_KEY:-}"
+
     ports:
       - "8000:8000"
     depends_on:
