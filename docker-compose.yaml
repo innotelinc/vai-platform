@@ -440,6 +440,10 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://signoz-otel-collector:4318/v1/traces"
       # Created by the Grist bootstrap step; override in .env for another doc.
       GRIST_DOC_ID: "${GRIST_DOC_ID:-new~kcsms7E9nU5Mg43rWKjNsX}"
+      # API key for the OpenAI-compatible gateway (host 9Router/OmniRoute on
+      # 20128). Required when the gateway enforces key auth (host 9Router does);
+      # leave empty for the zero-config OmniRoute container (no auth needed).
+      OMNIROUTE_API_KEY: "${OMNIROUTE_API_KEY:-}"
 
       # ── n8n AI Assistant (self-hosted, open-source) ───────────────────────
       # instance-ai module + locally-run sandbox (n8n-sandbox) + SearXNG search.
