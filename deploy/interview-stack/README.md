@@ -198,6 +198,28 @@ python3 deploy/interview-stack/verify_chain.py
 
 That script is a stand-in for CI and does not replace the real call test.
 
+### On-demand smoke test of the full grading chain
+
+To trigger the real grading chain (workflow run → transcript upload → n8n
+webhook → Ollama → Grist row) at any time against the running stack, run
+`smoke_test_grader.py` inside the API container. It reuses an existing
+workflow (or creates one), uploads a realistic Tier 1 transcript through the
+production artifact path, fires the n8n webhook with a real public download
+URL, and polls Grist until the graded row lands:
+
+```bash
+docker cp deploy/interview-stack/smoke_test_grader.py vai-platform-api-1:/tmp/
+docker exec \
+  -e GRIST_DOC_ID="$(grep -E '^GRIST_DOC_ID=' .env | cut -d= -f2-)" \
+  -e GRIST_API_KEY="$(grep -E '^GRIST_API_KEY=' .env | cut -d= -f2-)" \
+  vai-platform-api-1 python /tmp/smoke_test_grader.py
+```
+
+Exit code 0 means the chain is verified end to end (a grade row landed in
+Grist and its stored transcript matches the fixture, not the webhook wrapper).
+Pass `--timeout`, `--student`, `--phone`, or `--transcript-file` to vary the
+run; the CPU-grade takes roughly one to three minutes after the webhook fires.
+
 ## Network and production notes
 
 - Import `npm-proxy-hosts.json` into Nginx Proxy Manager for the seven HTTPS
