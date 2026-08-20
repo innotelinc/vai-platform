@@ -61,7 +61,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const body = $('Webhook').item.json.body || $('Webhook').item.json;\nconsole.log('PARSE_IN=', JSON.stringify($json).slice(0, 200));\nconst raw = String($json.choices?.[0]?.message?.content || '').trim();\nlet grade;\ntry {\n  const jsonText = raw.replace(/^```(?:json)?\\s*/i, '').replace(/\\s*```$/, '');\n  grade = JSON.parse(jsonText);\n} catch (e) {\n  grade = { overall_score: 0, verdict: 'fail', dimensions: {}, strengths: [], improvements: [], parse_error: raw };\n}\nreturn [{\n  json: {\n    run_id: body.run_id,\n    student_name: body.student_name,\n    phone: body.phone,\n    overall_score: grade.overall_score,\n    verdict: grade.verdict,\n    dimensions: grade.dimensions,\n    strengths: grade.strengths,\n    improvements: grade.improvements,\n    transcript: $('Fetch transcript').item.json.data || $('Fetch transcript').item.json\n  }\n}];"
+        "jsCode": "const body = $('Webhook').item.json.body || $('Webhook').item.json;\nconsole.log('PARSE_IN=', JSON.stringify($json).slice(0, 200));\nconst raw = String($json.choices?.[0]?.message?.content || '').trim();\nlet grade;\ntry {\n  const jsonText = raw.replace(/^```(?:json)?\\s*/i, '').replace(/\\s*```$/, '');\n  grade = JSON.parse(jsonText);\n} catch (e) {\n  grade = { overall_score: 0, verdict: 'fail', dimensions: {}, strengths: [], improvements: [], parse_error: raw };\n}\nconst rawTranscript = $('Fetch transcript').item.json.data || $('Fetch transcript').item.json;\nconst transcript = typeof rawTranscript === 'string' ? rawTranscript : JSON.stringify(rawTranscript);\nreturn [{\n  json: {\n    run_id: body.run_id,\n    student_name: body.student_name,\n    phone: body.phone,\n    overall_score: grade.overall_score,\n    verdict: grade.verdict,\n    dimensions: grade.dimensions,\n    strengths: grade.strengths,\n    improvements: grade.improvements,\n    transcript\n  }\n}];"
       },
       "id": "node-parse-grade",
       "name": "Parse grade",
@@ -76,7 +76,8 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" }
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Authorization", "value": "={{ 'Bearer ' + ($env.GRIST_API_KEY || '') }}" }
           ]
         },
         "sendBody": true,

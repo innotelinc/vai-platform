@@ -113,7 +113,8 @@ return [{
 - Method `POST`, URL `http://grist:8484/api/docs/<DOC_ID>/tables/Interviews/records`.
   (`grist` is the merged vai-platform Compose service. `specifyBody: "json"`
   is required here too.)
-- Auth: Basic (GRIST_DEFAULT_EMAIL / GRIST_DEFAULT_PASSWORD from the compose).
+- Auth: `Authorization: Bearer <GRIST_API_KEY>` (the admin user's API key from
+  Grist → Profile → API, exposed to n8n as `GRIST_API_KEY`).
 - Body:
 
 ```json
@@ -137,7 +138,9 @@ return [{
 Create the `Interviews` table in Grist first (columns: Student, Phone, RunID,
 Score, Verdict, Dimensions, Strengths, Improvements, Transcript). The merged
 Compose stack keeps Grist in the same project; set the resulting document ID in
-`GRIST_DOC_ID` before restarting n8n.
+`GRIST_DOC_ID` and the admin API key in `GRIST_API_KEY` before restarting n8n.
+The document stays private — the grader authenticates with the API key rather
+than exposing the transcript table anonymously.
 
 **NocoDB alternative:** `POST http://nocodb:8080/api/v2/meta/tables/<TABLE_ID>/records`
 with header `xc-auth: <token>` and the same fields as a flat JSON object.

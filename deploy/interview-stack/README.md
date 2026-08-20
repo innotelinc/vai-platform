@@ -121,8 +121,10 @@ The workflow writes to:
 `POST /api/docs/<GRIST_DOC_ID>/tables/Interviews/records`.
 For a single-user Grist install, create the document from the Grist UI at
 `http://localhost:8484` (or `https://grist.vai.innotel.us`) and put its ID in
-`.env` before restarting n8n. This is the only one-time UI setup;
-rows are written automatically afterward.
+`.env` before restarting n8n. Generate the admin user's API key (Grist →
+Profile → API) and put it in `.env` as `GRIST_API_KEY`; the grader sends it as a
+Bearer token so the transcript table can stay private. This is the only
+one-time UI setup; rows are written automatically afterward.
 
 ## PBX wiring
 
