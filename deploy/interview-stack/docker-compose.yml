@@ -407,12 +407,7 @@ services:
     networks: [interview-net]
 
   # ── Storage & dashboard: Grist (single-binary, API-first, no SaaS) ────────
-  # NocoDB alternative (swap in instead):
-  #   nocodb:
-  #     image: nocodb/nocodb:latest
-  #     ports: ["8080:8080"]
-  #     volumes: [nocodb_data:/usr/app/data]
-  #     networks: [interview-net]
+  # NocoDB is available as an opt-in alternative (see the nocodb service below).
   grist:
     image: gristlabs/grist:latest
     container_name: grist
@@ -435,6 +430,29 @@ services:
       retries: 5
       start_period: 30s
     networks: [interview-net]
+
+  # ── Storage & dashboard alternative: NocoDB (opt-in, profile "nocodb") ────
+  # Same purpose as Grist (student/transcript/score dashboard). Enable with
+  # `docker compose --profile nocodb up -d`; n8n reaches it at `nocodb:8080`
+  # on the bridge (or host.docker.internal:8080 from other containers). The
+  # grading workflow's last node then targets the NocoDB API instead — see
+  # n8n-interview-grader.md → NocoDB alternative.
+  nocodb:
+    image: nocodb/nocodb:latest
+    container_name: nocodb
+    restart: unless-stopped
+    ports:
+      - "0.0.0.0:8080:8080"   # 0.0.0.0 — n8n reaches it via the bridge / host.docker.internal:8080
+    volumes:
+      - nocodb_data:/usr/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks: [interview-net]
+    profiles: ["nocodb"]
 
   # ── Observability: SigNoz v0.138 topology — postgres metastore + separate
   # ClickHouse Keeper + unified `signoz` binary (UI + API on 8080). Config
@@ -590,6 +608,7 @@ volumes:
   n8n_data:
   omniroute_data:
   grist_data:
+  nocodb_data:
   clickhouse_data:
   keeper_data:
   signoz_postgres_data:
