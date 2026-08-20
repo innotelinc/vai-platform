@@ -15,7 +15,7 @@ dograh Webhook node ──POST──▶ n8n Webhook trigger
         ▼
 [1] HTTP Request  ──GET transcript_url──▶  transcript text
         ▼
-[2] HTTP Request  ──POST Ollama llama3.2 /v1/chat/completions──▶  JSON grade
+[2] HTTP Request  ──POST OmniRoute auto /v1/chat/completions──▶  JSON grade
         │  body: messages = [system: RUBRIC, user: transcript]
         ▼
 [3] Code node  ──parse choices[0].message.content──▶  normalized fields
@@ -57,10 +57,12 @@ dograh Webhook node ──POST──▶ n8n Webhook trigger
   `{{ $json.body.transcript_url.replace('localhost', 'host.docker.internal') }}`.
 - Response: plain text transcript. Output it as `transcript`.
 
-## Node 3 — HTTP Request: grade via Ollama (llama3.2)
+## Node 3 — HTTP Request: grade via OmniRoute (auto)
 
-- Method `POST`, URL `http://host.docker.internal:11434/v1/chat/completions`
-  (host-installed Ollama, model `llama3.2`; reachable from the n8n container).
+- Method `POST`, URL `http://host.docker.internal:20128/v1/chat/completions`
+  (OmniRoute gateway, model `auto` — routes across its free/connected
+  providers. Same port as the old 9Router; reachable from the n8n container
+  via the `host-gateway` extra host).
 - Headers: `Content-Type: application/json`.
 - **Must set `specifyBody: "json"`** on the node, or n8n ignores `jsonBody`
   and sends an empty body (`{"":""}`). The URL field has no such gate, which
@@ -70,7 +72,7 @@ dograh Webhook node ──POST──▶ n8n Webhook trigger
 
 ```json
 {
-  "model": "llama3.2",
+  "model": "auto",
   "temperature": 0.2,
   "response_format": { "type": "json_object" },
   "messages": [
@@ -80,9 +82,9 @@ dograh Webhook node ──POST──▶ n8n Webhook trigger
 }
 ```
 
-> Ollama's OpenAI-compatible endpoint doesn't use `response_format`; the
-> rubric below demands strict JSON and the verified workflow omits the field,
-> so the model emits JSON from the prompt alone.
+> The workflow omits `response_format` — the rubric demands strict JSON and
+> the model emits JSON from the prompt alone, so the same body works across any
+> OpenAI-compatible gateway (OmniRoute, Ollama, vLLM, …).
 
 ## Node 3b — Code node: parse the grade
 
@@ -143,7 +145,7 @@ with header `xc-auth: <token>` and the same fields as a flat JSON object.
 
 # IT Help Desk Tier 1 — grading system prompt
 
-Paste this into the `System Prompt` node (or directly into the Ollama body).
+Paste this into the `System Prompt` node (or directly into the grading request body).
 It is written to be pasted verbatim into the `content` of the system message.
 
 ```
@@ -247,7 +249,7 @@ aren't part of the live dograh dev stack:
   endpoint 302-redirects to a signed MinIO URL, which n8n follows by default)
   and retrieved the transcript.
 - **grading call** — n8n POSTed `{model, temperature, messages}` to an
-  OpenAI-compatible stand-in (the live stack now points this at Ollama llama3.2): the system message carried the full rubric and the user
+  OpenAI-compatible stand-in (the live stack now points this at OmniRoute `auto`): the system message carried the full rubric and the user
   message contained the actual transcript text.
 - **Grist write** — n8n POSTed
   `{records: [{fields: {Student, Phone, RunID, Score: 86, Verdict: "pass",

@@ -372,6 +372,42 @@ services:
       start_period: 300s
     networks: [app-network]
 
+  # ── LLM gateway: OmniRoute (OpenAI-compatible, port 20128) ───────────────
+  # MIT-licensed AI gateway (github.com/diegosouzapw/OmniRoute). model "auto" =
+  # zero-config routing across its free/connected providers with automatic
+  # failover; dashboard also on :20128 (first login uses INITIAL_PASSWORD).
+  # Same port as the old 9Router: n8n reaches it via host.docker.internal:20128,
+  # the bridge-mode api via http://omniroute:20128/v1.
+  # ⚠ Free-tier cloud providers need internet; add a local Ollama/vLLM as a
+  # provider in the dashboard for a fully-local LLM.
+  omniroute:
+    image: ${OMNIROUTE_IMAGE:-diegosouzapw/omniroute:latest}
+    container_name: omniroute
+    restart: unless-stopped
+    environment:
+      DATA_DIR: /app/data
+      PORT: "20128"
+      DASHBOARD_PORT: "20128"
+      # Required secrets — set real random values in .env
+      # (openssl rand -base64 48 / -hex 32 / -base64 32)
+      JWT_SECRET: "${OMNIROUTE_JWT_SECRET:-change-me-omniroute-jwt}"
+      API_KEY_SECRET: "${OMNIROUTE_API_KEY_SECRET:-change-me-omniroute-api-key}"
+      INITIAL_PASSWORD: "${OMNIROUTE_INITIAL_PASSWORD:-change-me-omniroute-admin}"
+      OMNIROUTE_WS_BRIDGE_SECRET: "${OMNIROUTE_WS_BRIDGE_SECRET:-change-me-omniroute-ws}"
+      # Rate-limiter backend: reuse the stack redis (own key namespace)
+      REDIS_URL: "redis://:${REDIS_PASSWORD:-redissecret}@redis:6379"
+    ports:
+      - "0.0.0.0:20128:20128"   # 0.0.0.0 — n8n reaches it via host.docker.internal:20128
+    volumes:
+      - omniroute_data:/app/data
+    healthcheck:
+      test: ["CMD", "node", "healthcheck.mjs"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks: [app-network]
+
   # ── Interview workflow + grading ─────────────────────────────────────────
   n8n:
     build:
@@ -404,11 +440,12 @@ services:
 
       # ── n8n AI Assistant (self-hosted, open-source) ───────────────────────
       # instance-ai module + locally-run sandbox (n8n-sandbox) + SearXNG search.
-      # The model is served by the host's Ollama (OpenAI-compatible /v1).
+      # The model is served by OmniRoute (OpenAI-compatible /v1 on 20128);
+      # model "auto" routes across its free/connected providers.
       N8N_ENABLED_MODULES: "${N8N_ENABLED_MODULES:-instance-ai}"
-      N8N_INSTANCE_AI_MODEL: "${N8N_INSTANCE_AI_MODEL:-openai/llama3.2}"
-      N8N_INSTANCE_AI_MODEL_URL: "${N8N_INSTANCE_AI_MODEL_URL:-http://host.docker.internal:11434/v1}"
-      N8N_INSTANCE_AI_MODEL_API_KEY: "${N8N_INSTANCE_AI_MODEL_API_KEY:-ollama-local}"
+      N8N_INSTANCE_AI_MODEL: "${N8N_INSTANCE_AI_MODEL:-auto}"
+      N8N_INSTANCE_AI_MODEL_URL: "${N8N_INSTANCE_AI_MODEL_URL:-http://host.docker.internal:20128/v1}"
+      N8N_INSTANCE_AI_MODEL_API_KEY: "${N8N_INSTANCE_AI_MODEL_API_KEY:-omniroute}"
       N8N_INSTANCE_AI_SANDBOX_ENABLED: "true"
       N8N_INSTANCE_AI_SANDBOX_PROVIDER: "n8n-sandbox"
       N8N_INSTANCE_AI_SANDBOX_API_URL: "http://sandbox-api:8080"
@@ -734,6 +771,7 @@ volumes:
     driver: local
   speaches_models:
   n8n_data:
+  omniroute_data:
   grist_data:
   clickhouse_data:
   keeper_data:
