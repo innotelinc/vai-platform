@@ -1,0 +1,10 @@
+# SearXNG settings for n8n AI Assistant web search.
+# The stock SearXNG image only serves HTML; n8n's web search needs the JSON
+# API, which this file turns on. Mounted read-only into the searxng container
+# by the root docker-compose.yaml.
+use_default_settings: true
+
+search:
+  formats:
+    - html
+    - json

@@ -401,17 +401,122 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://signoz-otel-collector:4318/v1/traces"
       # Created by the Grist bootstrap step; override in .env for another doc.
       GRIST_DOC_ID: "${GRIST_DOC_ID:-new~kcsms7E9nU5Mg43rWKjNsX}"
+
+      # ── n8n AI Assistant (self-hosted, open-source) ───────────────────────
+      # instance-ai module + locally-run sandbox (n8n-sandbox) + SearXNG search.
+      # The model is served by the host's Ollama (OpenAI-compatible /v1).
+      N8N_ENABLED_MODULES: "${N8N_ENABLED_MODULES:-instance-ai}"
+      N8N_INSTANCE_AI_MODEL: "${N8N_INSTANCE_AI_MODEL:-openai/llama3.2}"
+      N8N_INSTANCE_AI_MODEL_URL: "${N8N_INSTANCE_AI_MODEL_URL:-http://host.docker.internal:11434/v1}"
+      N8N_INSTANCE_AI_MODEL_API_KEY: "${N8N_INSTANCE_AI_MODEL_API_KEY:-ollama-local}"
+      N8N_INSTANCE_AI_SANDBOX_ENABLED: "true"
+      N8N_INSTANCE_AI_SANDBOX_PROVIDER: "n8n-sandbox"
+      N8N_INSTANCE_AI_SANDBOX_API_URL: "http://sandbox-api:8080"
+      N8N_INSTANCE_AI_SANDBOX_API_KEY: "${SANDBOX_API_KEYS:-change-me-sandbox-api-key}"
+      N8N_INSTANCE_AI_SANDBOX_IMAGE: "ghcr.io/n8n-io/n8n-sandbox-service-sandbox:latest"
+      N8N_INSTANCE_AI_SEARXNG_URL: "http://searxng:8080"
     volumes:
       - n8n_data:/home/node/.n8n
       - ./deploy/interview-stack/n8n-grader-workflow.json:/workflows/n8n-grader-workflow.json:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    depends_on:
+      sandbox-api:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:5678/healthz || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 45s
+    networks: [app-network]
+
+  # n8n AI Assistant sandbox stack (self-hosted; see docs.n8n.io …/set-up-ai-assistant).
+  # sandbox-certs generates mTLS certs once, sandbox-api is the control plane n8n
+  # talks to, sandbox-runner-1 is a privileged DinD runner that creates the actual
+  # execution sandboxes, and searxng provides web search. None of these publish
+  # ports to the host — n8n reaches them by service name over app-network.
+  sandbox-certs:
+    image: ghcr.io/n8n-io/n8n-sandbox-service-api:latest
+    container_name: n8n-sandbox-certs
+    restart: "no"
+    user: "0:0"
+    entrypoint: ["sh", "-c"]
+    command:
+      - >-
+        bootstrap-mtls.sh --out-dir /tls --api-san sandbox-api
+        --control-san-prefix sandbox-runner &&
+        chown -R sandbox-api:sandbox-api /tls/api
+    environment:
+      NUM_RUNNERS: "1"
+    volumes:
+      - sandbox-tls:/tls
+    networks: [app-network]
+
+  sandbox-api:
+    image: ghcr.io/n8n-io/n8n-sandbox-service-api:latest
+    container_name: n8n-sandbox-api
+    restart: unless-stopped
+    depends_on:
+      sandbox-certs:
+        condition: service_completed_successfully
+    environment:
+      SANDBOX_API_KEYS: "${SANDBOX_API_KEYS:-change-me-sandbox-api-key}"
+      SANDBOX_API_RUNNER_REGISTRATION_TOKEN: "${SANDBOX_API_RUNNER_REGISTRATION_TOKEN:-change-me-runner-registration-token}"
+      SANDBOX_API_RUNNER_API_KEY: "${SANDBOX_API_RUNNER_API_KEY:-change-me-runner-key}"
+      SANDBOX_API_GRPC_TLS_CERT_FILE: /tls/api/grpc-server.crt
+      SANDBOX_API_GRPC_TLS_KEY_FILE: /tls/api/grpc-server.key
+      SANDBOX_API_GRPC_TLS_CLIENT_CA_FILE: /tls/api/ca.crt
+      SANDBOX_API_RUNNER_CONTROL_GRPC_TLS_CA_FILE: /tls/api/ca.crt
+      SANDBOX_API_RUNNER_CONTROL_GRPC_TLS_CERT_FILE: /tls/api/control-grpc-api-client.crt
+      SANDBOX_API_RUNNER_CONTROL_GRPC_TLS_KEY_FILE: /tls/api/control-grpc-api-client.key
+      SANDBOX_API_RUNNER_CONTROL_GRPC_TLS_SERVER_NAME: sandbox-runner-1
+    volumes:
+      - sandbox-tls:/tls:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    networks: [app-network]
+
+  sandbox-runner-1:
+    image: ghcr.io/n8n-io/n8n-sandbox-service-runner-dind:latest
+    container_name: n8n-sandbox-runner-1
+    restart: unless-stopped
+    privileged: true
+    depends_on:
+      sandbox-api:
+        condition: service_healthy
+    environment:
+      SANDBOX_RUNNER_API_KEYS: "${SANDBOX_API_RUNNER_API_KEY:-change-me-runner-key}"
+      SANDBOX_RUNNER_REGISTRATION_TOKEN: "${SANDBOX_API_RUNNER_REGISTRATION_TOKEN:-change-me-runner-registration-token}"
+      SANDBOX_RUNNER_API_GRPC_ADDR: sandbox-api:9090
+      SANDBOX_RUNNER_HTTP_BASE_URL: http://sandbox-runner-1:8080
+      SANDBOX_RUNNER_CONTROL_GRPC_LISTEN_ADDR: ":9091"
+      SANDBOX_RUNNER_CONTROL_GRPC_ADVERTISE_ADDR: sandbox-runner-1:9091
+      SANDBOX_RUNNER_ID: runner-1
+      SANDBOX_RUNNER_DOCKER_SANDBOX_IMAGE: ghcr.io/n8n-io/n8n-sandbox-service-sandbox:latest
+      SANDBOX_RUNNER_REGISTRATION_GRPC_CA_FILE: /tls/runner/ca.crt
+      SANDBOX_RUNNER_REGISTRATION_GRPC_CERT_FILE: /tls/runner/grpc-client.crt
+      SANDBOX_RUNNER_REGISTRATION_GRPC_KEY_FILE: /tls/runner/grpc-client.key
+      SANDBOX_RUNNER_REGISTRATION_GRPC_SERVER_NAME: sandbox-api
+      SANDBOX_RUNNER_CONTROL_GRPC_TLS_CERT_FILE: /tls/runner/control-grpc-server.crt
+      SANDBOX_RUNNER_CONTROL_GRPC_TLS_KEY_FILE: /tls/runner/control-grpc-server.key
+      SANDBOX_RUNNER_CONTROL_GRPC_TLS_CLIENT_CA_FILE: /tls/runner/ca.crt
+    volumes:
+      - sandbox-tls:/tls:ro
+    networks: [app-network]
+
+  searxng:
+    image: ghcr.io/searxng/searxng:latest
+    container_name: searxng
+    restart: unless-stopped
+    environment:
+      SEARXNG_SECRET: "${SEARXNG_SECRET:-change-me-searxng-secret}"
+    volumes:
+      - ./deploy/interview-stack/searxng-settings.yml:/etc/searxng/settings.yml:ro
     networks: [app-network]
 
   n8n-import:
@@ -634,6 +739,7 @@ volumes:
   keeper_data:
   signoz_postgres_data:
   signoz_data:
+  sandbox-tls:
 
 networks:
   app-network:
