@@ -372,6 +372,63 @@ services:
       start_period: 300s
     networks: [app-network]
 
+  # ── Local LLM + 9Router gateway ──────────────────────────────────────────
+  # Ollama is the only model server. 9Router is a small OpenAI-compatible
+  # gateway that forwards streaming and non-streaming calls to Ollama.
+  ollama:
+    image: ${OLLAMA_IMAGE:-ollama/ollama:latest}
+    container_name: ollama
+    restart: unless-stopped
+    # Ollama is private to app-network; 9Router is the only LLM endpoint.
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    networks: [app-network]
+
+  ollama-model:
+    image: ${OLLAMA_IMAGE:-ollama/ollama:latest}
+    container_name: ollama_model
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["ollama pull $${OLLAMA_MODEL:-llama3.2}"]
+    environment:
+      OLLAMA_HOST: "http://ollama:11434"
+      OLLAMA_MODEL: "${OLLAMA_MODEL:-llama3.2}"
+    depends_on:
+      ollama:
+        condition: service_healthy
+    volumes:
+      - ollama_data:/root/.ollama
+    networks: [app-network]
+
+  nine-router:
+    image: ${NINE_ROUTER_IMAGE:-python:3.13-alpine}
+    container_name: nine-router
+    restart: unless-stopped
+    command: ["python", "/app/llm_router.py"]
+    environment:
+      ROUTER_PORT: "20128"
+      OLLAMA_UPSTREAM: "http://ollama:11434"
+    ports:
+      - "127.0.0.1:20128:20128"
+    volumes:
+      - ./deploy/interview-stack/llm_router.py:/app/llm_router.py:ro
+    depends_on:
+      ollama-model:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:20128/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    networks: [app-network]
+
   # ── Interview workflow + grading ─────────────────────────────────────────
   n8n:
     build:
@@ -400,18 +457,20 @@ services:
       OTEL_SERVICE_NAME: "n8n"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://signoz-otel-collector:4318/v1/traces"
       # Created by the Grist bootstrap step; override in .env for another doc.
-      GRIST_DOC_ID: "${GRIST_DOC_ID:-new~kcsms7E9nU5Mg43rWKjNsX}"
+      GRIST_DOC_ID: "${GRIST_DOC_ID:-interview-grader}"
 
       # ── n8n AI Assistant (self-hosted, open-source) ───────────────────────
       # instance-ai module + locally-run sandbox (n8n-sandbox) + SearXNG search.
-      # The model is served by the host's Ollama (OpenAI-compatible /v1).
+      # The model is served by the in-stack Ollama-compatible 9Router gateway.
       N8N_ENABLED_MODULES: "${N8N_ENABLED_MODULES:-instance-ai}"
       N8N_INSTANCE_AI_MODEL: "${N8N_INSTANCE_AI_MODEL:-openai/llama3.2}"
-      N8N_INSTANCE_AI_MODEL_URL: "${N8N_INSTANCE_AI_MODEL_URL:-http://host.docker.internal:11434/v1}"
+      N8N_INSTANCE_AI_MODEL_URL: "${N8N_INSTANCE_AI_MODEL_URL:-http://nine-router:20128/v1}"
       N8N_INSTANCE_AI_MODEL_API_KEY: "${N8N_INSTANCE_AI_MODEL_API_KEY:-ollama-local}"
       N8N_INSTANCE_AI_SANDBOX_ENABLED: "true"
       N8N_INSTANCE_AI_SANDBOX_PROVIDER: "n8n-sandbox"
       N8N_INSTANCE_AI_SANDBOX_API_URL: "http://sandbox-api:8080"
+      # Required by n8n 2.x when the Instance AI sandbox provider is n8n-sandbox.
+      N8N_SANDBOX_SERVICE_URL: "http://sandbox-api:8080"
       N8N_INSTANCE_AI_SANDBOX_API_KEY: "${SANDBOX_API_KEYS:-change-me-sandbox-api-key}"
       N8N_INSTANCE_AI_SANDBOX_IMAGE: "ghcr.io/n8n-io/n8n-sandbox-service-sandbox:latest"
       N8N_INSTANCE_AI_SEARXNG_URL: "http://searxng:8080"
@@ -422,6 +481,8 @@ services:
       - "host.docker.internal:host-gateway"
     depends_on:
       sandbox-api:
+        condition: service_healthy
+      nine-router:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:5678/healthz || exit 1"]
@@ -528,7 +589,7 @@ services:
       - >-
         n8n import:workflow --input=/workflows/n8n-grader-workflow.json &&
         n8n publish:workflow --id=interview-grader-workflow &&
-        n8n update:workflow --id=interview-grader-workflow --active=true || true
+        n8n update:workflow --id=interview-grader-workflow --active=true
     depends_on:
       n8n:
         condition: service_healthy
@@ -740,6 +801,7 @@ volumes:
   signoz_postgres_data:
   signoz_data:
   sandbox-tls:
+  ollama_data:
 
 networks:
   app-network:

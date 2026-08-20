@@ -270,6 +270,36 @@ in [`deploy/asterisk/README.md`](deploy/asterisk/README.md). In short:
 
 ---
 
+## Interview voice agent and scoring stack
+
+The same Compose project includes the self-hosted mock-interview path:
+
+```text
+FreePBX/Asterisk → Dograh API + Pipecat → Speaches STT / 9Router → Ollama
+                                      ↘ Kokoro TTS
+Call completion → n8n grader → Grist Interviews table
+                         ↘ OpenTelemetry → SigNoz
+```
+
+Ollama, the in-repo OpenAI-compatible 9Router gateway, Speaches, Kokoro,
+n8n Community Edition, the n8n sandbox + SearXNG AI Assistant, Grist, and
+SigNoz all run locally. The model server and router are loopback-only; they
+must not be exposed through NPM or the public router. Set `OLLAMA_MODEL`
+(default `llama3.2`) and `GRIST_DOC_ID` in `.env`, then start with:
+
+```bash
+git submodule update --init --recursive
+docker compose config --quiet
+docker compose up -d --build
+docker compose ps
+```
+
+The complete PBX wiring, model URLs, n8n workflow, Grist table schema, and
+smoke-test commands are in [`deploy/interview-stack/README.md`](deploy/interview-stack/README.md).
+Use [`deploy/interview-stack/NETWORKING.md`](deploy/interview-stack/NETWORKING.md)
+and [`deploy/asterisk/README.md`](deploy/asterisk/README.md) for NPM, firewall,
+FreePBX, ARI, and media-WebSocket setup.
+
 ## Operations
 
 ```bash

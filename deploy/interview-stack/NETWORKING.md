@@ -73,8 +73,9 @@ Notes:
 
 ## Tier 3 — LAN/docker-internal ONLY (never forward, never proxy)
 
-All of these bind to the host but must NOT appear in the router or NPM. They
-are only reachable by dograh (host mode → `127.0.0.1`) or by other containers.
+All of these bind to the host only for local diagnostics and must NOT appear
+in the router or NPM. Service-to-service traffic uses the private Compose
+network and service names; host bindings are loopback-only unless noted.
 
 | Port(s)          | Service                        |
 |------------------|--------------------------------|
@@ -83,7 +84,8 @@ are only reachable by dograh (host mode → `127.0.0.1`) or by other containers.
 | 9000, 9001       | minio API + console            |
 | 8880             | kokoro-fastapi (TTS)           |
 | 8001             | speaches (STT)                 |
-| 20128            | 9Router (LLM)                  |
+| 11434            | Ollama model server            |
+| 20128            | 9Router OpenAI-compatible gateway |
 | 8088 (+8089 if used) | Asterisk ARI (PBX side; NPM forwards `ari.voice.innotel.us`) |
 | 3300             | SigNoz query-service API       |
 | 4317, 4318       | SigNoz OTel ingest (gRPC/HTTP) |
@@ -91,12 +93,11 @@ are only reachable by dograh (host mode → `127.0.0.1`) or by other containers.
 | 19000, 8123, 19189 | ClickHouse (native/HTTP/keeper) |
 | 9093             | SigNoz alertmanager            |
 
-> **Hardening applied in the compose:** every Tier-3 mapping is bound to
-> `127.0.0.1:<port>:<port>`, so these don't answer on the LAN at all. The only
-> `0.0.0.0` bindings are the exceptions that need it: **20128** and **8484**
-> (n8n reaches them via `host.docker.internal` = the host gateway IP, not
-> loopback) and the NPM proxy targets **5678** (n8n) and **3301** (SigNoz UI).
-> dograh-api is host-mode (port 8000) and is only exposed if you proxy it.
+> **Hardening applied in the compose:** model, router, database, cache,
+> object-store, media, and OTel mappings are bound to `127.0.0.1`, so they do
+> not answer on the LAN. The intentional NPM targets are the API/UI, n8n,
+> Grist, and SigNoz ports. The internal Docker network is still required for
+> `api`, `nine-router`, `ollama`, `speaches`, `kokoro`, n8n, and SigNoz.
 
 ## The phone path (why nothing else is exposed)
 
@@ -104,8 +105,8 @@ are only reachable by dograh (host mode → `127.0.0.1`) or by other containers.
 student phone ──SIP 5060 / RTP 10000-20000──▶ Asterisk (PBX)
 Asterisk ──ARI REST+WS (8088)──▶ dograh        (dograh dials out to the PBX)
 Asterisk ──media WS──▶ dograh :8000 /api/v1/telephony/ws/ari   (Asterisk dials out)
-dograh   ──localhost──▶ 9Router :20128, kokoro :8880, speaches :8001
-dograh   ──LAN──▶ n8n :5678 (webhook), n8n ──LAN──▶ dograh :8000 (transcript)
+dograh   ──Docker network──▶ nine-router → Ollama, kokoro, speaches
+Dograh   ──LAN──▶ n8n :5678 (webhook), n8n ──LAN──▶ dograh :8000 (transcript)
 ```
 
 Every hop is either localhost, the docker bridge, or the LAN. The only

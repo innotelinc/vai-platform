@@ -41,7 +41,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://host.docker.internal:11434/v1/chat/completions",
+        "url": "http://nine-router:20128/v1/chat/completions",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
