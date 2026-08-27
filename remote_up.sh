@@ -91,8 +91,21 @@ if dograh_is_local_ipv4 "${SERVER_IP:-}"; then
     PROFILE_ARGS+=(--profile tunnel)
 fi
 
+# This fork's docker-compose.override.yaml builds api/ui/n8n from source and
+# marks them pull_policy: never. `--pull always` overrides pull_policy and
+# forces a registry pull of those local-only images — the "pull access denied"
+# errors. Detect local builds in the merged config and, when present, drop
+# `--pull always`: compose then builds the local images and pulls the rest
+# (default pull policy "missing") without forcing a full rebuild.
+LOCAL_BUILDS=0
+if docker compose config 2>/dev/null | grep -q "pull_policy: never"; then
+    LOCAL_BUILDS=1
+fi
+
 if [[ "$MODE" == "build" ]]; then
     CMD=("${COMPOSE_CMD[@]}" "${PROFILE_ARGS[@]}" up -d --build --force-recreate)
+elif (( LOCAL_BUILDS == 1 )); then
+    CMD=("${COMPOSE_CMD[@]}" "${PROFILE_ARGS[@]}" up -d --force-recreate)
 else
     CMD=("${COMPOSE_CMD[@]}" "${PROFILE_ARGS[@]}" up -d --pull always --force-recreate)
 fi
