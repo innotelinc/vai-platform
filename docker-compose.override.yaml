@@ -37,8 +37,20 @@ services:
       dockerfile: ui/Dockerfile
     image: dograh-local/dograh-ui:local
     pull_policy: never
+    # Base compose binds the UI to loopback only (nginx reaches it over the
+    # docker network). This deployment is also tested directly over the LAN
+    # (http://<host-lan-ip>:3010), so publish on all interfaces. `!override`
+    # replaces the base list instead of appending a conflicting duplicate.
+    ports: !override
+      - "0.0.0.0:3010:3010"
 
   minio:
+    # Base compose binds MinIO to loopback only. This deployment is also
+    # tested directly over the LAN, so publish the API + console on all
+    # interfaces. `!override` replaces the base list.
+    ports: !override
+      - "0.0.0.0:9000:9000"
+      - "0.0.0.0:9001:9001"
     environment:
       MINIO_ROOT_USER: "${MINIO_ACCESS_KEY:-minioadmin}"
       MINIO_ROOT_PASSWORD: "${MINIO_SECRET_KEY:-minioadmin}"
