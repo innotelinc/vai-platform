@@ -180,6 +180,15 @@ if ! docker compose "${PROFILE_ARGS[@]}" up -d; then
     dograh_warn "Second docker compose up reported issues; continuing to verify — failures below will name the service."
 fi
 
+# nginx (port 80 front) depends on dograh-init completing AND ui starting, so a
+# first `up` that aborts on another service's dependency can leave it "Created".
+# Start it explicitly now that its dependencies are satisfied; idempotent.
+if docker compose "${PROFILE_ARGS[@]}" up -d nginx; then
+    dograh_success "✓ nginx started — UI reachable on port 80"
+else
+    dograh_warn "nginx did not start; the UI is still reachable on :3010."
+fi
+
 # ── 6) Verify every service endpoint ─────────────────────────────────────
 # Probes each published port over HTTP and reports pass/fail. Polls all
 # services in parallel within one shared deadline, so slow first boots
@@ -203,10 +212,11 @@ http_code() {
     printf '%s\n' "$code"
 }
 
-svc_names=(API "Dograh UI" MinIO "kokoro (TTS)" "speaches (STT)" n8n Grist SigNoz OmniRoute)
+svc_names=(API "Dograh UI" "nginx (port 80)" MinIO "kokoro (TTS)" "speaches (STT)" n8n Grist SigNoz OmniRoute)
 svc_urls=(
   "http://localhost:8000/api/v1/health"
   "http://localhost:3010"
+  "http://localhost/"
   "http://localhost:9000/minio/health/live"
   "http://127.0.0.1:8880/health"
   "http://127.0.0.1:8001/health"
@@ -267,7 +277,7 @@ echo -e "${GREEN}╚════════════════════
 echo ""
 echo "Services are up. Access URLs:"
 echo ""
-echo "  Dograh UI       http://localhost:3010"
+echo "  Dograh UI       http://localhost:3010   (or http://<host-ip>/ via nginx on port 80)"
 echo "  API health      http://localhost:8000/api/v1/health"
 echo "  MinIO console   http://localhost:9001"
 echo "  n8n             http://localhost:5678"
