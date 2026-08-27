@@ -303,7 +303,10 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 30s
+      # First boot can take several minutes (OTel bootstrap + AI-assistant
+      # module init); a short start_period marks it unhealthy before it binds
+      # :5678, which then aborts dependent services (n8n-import).
+      start_period: 300s
     networks: [interview-net]
 
   # Imports + publishes + activates the Interview Grader workflow on startup
@@ -385,6 +388,11 @@ services:
       sandbox-api:
         condition: service_healthy
     environment:
+      # DinD: when the host kernel lacks the br_netfilter module (common on VPS /
+      # containerized hosts), the nested dockerd errors with "cannot restrict
+      # inter-container communication ... no such file or directory" and refuses
+      # to start. This env var is dockerd's documented opt-out for that check.
+      DOCKER_IGNORE_BR_NETFILTER_ERROR: "1"
       SANDBOX_RUNNER_API_KEYS: "${SANDBOX_API_RUNNER_API_KEY:-change-me-runner-key}"
       SANDBOX_RUNNER_REGISTRATION_TOKEN: "${SANDBOX_API_RUNNER_REGISTRATION_TOKEN:-change-me-runner-registration-token}"
       SANDBOX_RUNNER_API_GRPC_ADDR: sandbox-api:9090
@@ -435,7 +443,9 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 30s
+      # First boot spawns a RestartShell child and only then binds :8484; a
+      # short start_period marks the container unhealthy during that window.
+      start_period: 300s
     networks: [interview-net]
 
   # ── Storage & dashboard alternative: NocoDB (opt-in, profile "nocodb") ────

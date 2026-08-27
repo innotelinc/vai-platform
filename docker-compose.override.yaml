@@ -43,6 +43,12 @@ services:
       MINIO_ROOT_USER: "${MINIO_ACCESS_KEY:-minioadmin}"
       MINIO_ROOT_PASSWORD: "${MINIO_SECRET_KEY:-minioadmin}"
 
+  n8n:
+    pull_policy: never
+
+  n8n-import:
+    pull_policy: never
+
   nginx:
     # Host port 80 comes from the base docker-compose.yaml (443 removed);
     # NPM at proxy.innotel.us forwards plain HTTP here.
