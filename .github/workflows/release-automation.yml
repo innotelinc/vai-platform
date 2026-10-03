@@ -18,5 +18,11 @@ jobs:
           # Config files location
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
-          # Use PAT to trigger deployment workflow
-          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          # A PAT is preferred: GitHub suppresses workflow runs caused by events a
+          # GITHUB_TOKEN creates, so a release cut with the built-in token will not
+          # cascade into `release-automation`/`release-deployment`. It is only an
+          # optimisation, though — an unset PAT secret made this action fail outright
+          # ("Input required and not supplied: token"), so it used to block every
+          # push to main. Fall back to GITHUB_TOKEN when the PAT is absent: the release
+          # is still cut, only the downstream trigger needs the PAT added back.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
