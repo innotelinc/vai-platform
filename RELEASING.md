@@ -44,6 +44,33 @@ git tag dograh-v1.45.0 && git push origin dograh-v1.45.0
 The tag must point at the commit the manifest's version describes — usually
 `main`'s HEAD at the time the manifest was written.
 
+## What actually deploys to Vercel
+
+Only `ui` does. The Vercel project's Root Directory is `ui`, so `vercel build`
+at the repo root builds `ui` alone, and `ui/vercel.json` is the config Vercel
+reads — a root `vercel.json` sitting beside it is **not** opened, so don't add
+one expecting services mode to take effect.
+
+`evals/visualizer` is not on Vercel either. It serves no traffic, and
+`vercel build` has no per-service flag, so anything declared in a `services`
+map would be built on every release and could fail the dashboard deploy.
+
+**The `api` is deliberately not on Vercel.** It is a long-running server, not a
+request handler: six WebSocket endpoints (`/ws/ari`, the WebRTC signaling
+channels, agent streams) plus a `coturn` UDP dependency for TURN. Vercel's
+WebSocket support is beta and limited to single-instance, session-scoped
+connections, and UDP cannot go there at all. It keeps running as
+`dograhai/dograh-api` on the container host beside Postgres, Redis and MinIO,
+per `docker-compose.yaml`.
+
+The `ui` reaches the API over the public internet via
+`NEXT_PUBLIC_BACKEND_URL`. That is not a limitation to route around — the
+browser opens the RTC WebSocket itself
+(`useWebSocketRTC.tsx`), so the API has to be on a reachable URL regardless of
+where it runs. That is also why there are no Vercel *service bindings* here: a
+binding injects a URL for server-side code only, and the one caller is a
+browser.
+
 ## Required repository secrets
 
 Without these the workflows still run, but fail in ways that look like
@@ -53,8 +80,8 @@ Set them under **Settings → Secrets and variables → Actions**.
 | Secret | Used by | Why it is required |
 |--------|---------|--------------------|
 | `VERCEL_TOKEN` | `release-deployment.yml` | Vercel CLI auth for `vercel pull` / `build` / `deploy --prod`. |
-| `VERCEL_ORG_ID` | `release-deployment.yml` | Which Vercel team/account owns the project. |
-| `VERCEL_PROJECT_ID` | `release-deployment.yml` | Which Vercel project to deploy. |
+| `VERCEL_ORG_ID` | `release-deployment.yml` | Which Vercel team owns the project. Use the **team id** (`team_…`) — `vercel pull` writes exactly that value into `.vercel/project.json` as `orgId`. |
+| `VERCEL_PROJECT_ID` | `release-deployment.yml` | Which Vercel project to deploy (`prj_…`). |
 | `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` | `docker-image.yml` | Pushes `dograh-api` / `dograh-ui` to Docker Hub. |
 | `GHCR_USERNAME` / `GHCR_TOKEN` | `docker-image.yml` | Pushes the same images to GitHub Container Registry. |
 | `SLACK_WEBHOOK_URL` | `api-tests.yml`, `release-deployment.yml` | Failure/success notifications. Optional: the notify steps skip when it is unset. |

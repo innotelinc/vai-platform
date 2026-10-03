@@ -81,17 +81,18 @@ jobs:
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
 
-      # These run from the repo root, which is where vercel.json defines the
-      # services. `vercel build` has no per-service flag, so it builds every
-      # service in the project — which is `ui` alone. `evals/visualizer` is
-      # deliberately not a service: it serves no traffic, and as a defined
-      # service it would be built on every release, so a break in an internal
-      # eval tool could fail the production dashboard deploy.
+      # These run from the repo root, but the Vercel project sets its Root Directory
+      # to `ui`, so that is what actually gets built — ui/vercel.json is the
+      # config Vercel reads, and the root vercel.json that used to sit here was
+      # never opened. Only the ui is deployed. `evals/visualizer` is not part of
+      # the Vercel project: it serves no traffic, and `vercel build` has no
+      # per-service flag, so anything declared there would be built on every
+      # release and could fail the dashboard deploy.
       #
-      # The api is deliberately NOT a service either: it is a long-running
+      # The api is deliberately not on Vercel either: it is a long-running
       # server (six WebSocket endpoints incl. ARI and WebRTC signaling, plus a
-      # coturn UDP dependency) and does not run on Vercel. The ui reaches it
-      # over the public internet via NEXT_PUBLIC_BACKEND_URL, which the browser
+      # coturn UDP dependency) and does not run there. The ui reaches it over
+      # the public internet via NEXT_PUBLIC_BACKEND_URL, which the browser
       # needs anyway for its RTC WebSocket.
 
       - name: Pull Vercel Environment Information
