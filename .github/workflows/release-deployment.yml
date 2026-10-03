@@ -1,44 +1,100 @@
 name: Deploy to Vercel Production
 
+# Triggered off the Release Please run, not off `release: published`.
+#
+# A release cut with the built-in GITHUB_TOKEN does not emit a `release` event —
+# GitHub suppresses runs caused by events a GITHUB_TOKEN creates — so this
+# workflow silently never ran and the repo carried a PAT (RELEASE_PLEASE_TOKEN)
+# purely to buy back that one trigger. `workflow_run` events are emitted by
+# Actions itself rather than by a token, so they are not suppressed: the release
+# is recovered from the payload instead, and no long-lived credential is needed.
+#
+# The trade is that this runs on every Release Please run, including the ones
+# that only open or refresh the release PR, so `resolve` identifies whether a
+# release was actually published and the deploy is gated on that.
 on:
-  release:
-    types: [published]
+  workflow_run:
+    workflows: ['Release Please']
+    types: [completed]
 
 permissions:
   contents: write
 
 jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+    steps:
+      - name: Find the release this run published
+        id: release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const started = context.payload.workflow_run.run_started_at;
+
+            const { data: releases } = await github.rest.repos.listReleases({
+              owner,
+              repo,
+              per_page: 20,
+            });
+
+            // release-please publishes with the timestamp GitHub recorded, so a
+            // release published at or after this run started is the one it cut.
+            // Drafts never get published_at and are not deployable targets.
+            const release = releases.find(
+              (r) => !r.draft && r.published_at && r.published_at >= started
+            );
+
+            if (!release) {
+              core.info(
+                'This run published no release (it only refreshed the release PR) — nothing to deploy.'
+              );
+              return;
+            }
+
+            core.info(`Deploying ${release.tag_name}`);
+            core.setOutput('tag', release.tag_name);
+
   deploy:
+    needs: resolve
+    if: needs.resolve.outputs.tag != ''
     runs-on: ubuntu-latest
     env:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
     environment: production
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+        with:
+          # Deploy the tag that was released, not whatever main has become by
+          # the time this job starts.
+          ref: ${{ needs.resolve.outputs.tag }}
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      
+
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
-      
+
       - name: Pull Vercel Environment Information
         run: vercel pull --yes --environment=production --token=$VERCEL_TOKEN
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      
+
       - name: Build Project Artifacts
         run: vercel build --prod --token=$VERCEL_TOKEN
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      
+
       - name: Deploy to Vercel Production
         run: |
           DEPLOYMENT_URL=$(vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN)
@@ -49,21 +105,28 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      
+
       - name: Comment on Release
         uses: actions/github-script@v7
         with:
           script: |
-            const deployment_url = '${{ steps.deploy.outputs.deployment_url }}';
+            // Under `on: release` this payload carried context.payload.release.
+            // A workflow_run payload does not, so the release is looked up by
+            // the tag `resolve` already resolved rather than by arrival order.
             const { owner, repo } = context.repo;
-            const release_id = context.payload.release.id;
-            
+            const tag = process.env.RELEASE_TAG;
+            const deployment_url = '${{ steps.deploy.outputs.deployment_url }}';
+
+            const release = await github.rest.repos.getReleaseByTag({ owner, repo, tag });
+
             await github.rest.repos.updateRelease({
               owner,
               repo,
-              release_id,
-              body: context.payload.release.body +
-                    '\n\n---\n🚀 **Deployed to Production:** ' + deployment_url
+              release_id: release.data.id,
+              body:
+                release.data.body +
+                '\n\n---\n🚀 **Deployed to Production:** ' +
+                deployment_url,
             });
 
       - name: Send Slack notification - Success
@@ -72,7 +135,7 @@ jobs:
         with:
           payload: |
             {
-              "text": "✅ Dograh Dashboard - Vercel Deployment Successful - ${{ steps.deploy.outputs.deployment_url || 'URL not captured' }} on ${{ github.ref_name }} by ${{ github.actor }} - <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Logs>"
+              "text": "✅ Dograh Dashboard - Vercel Deployment Successful - ${{ steps.deploy.outputs.deployment_url || 'URL not captured' }} for ${{ env.RELEASE_TAG }} by ${{ github.actor }} - <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Logs>"
             }
 
       - name: Send Slack notification - Failure
@@ -81,5 +144,5 @@ jobs:
         with:
           payload: |
             {
-              "text": "❌ Dograh Dashboard - Vercel Deployment Failed on ${{ github.ref_name }} by ${{ github.actor }} - <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Logs>"
+              "text": "❌ Dograh Dashboard - Vercel Deployment Failed for ${{ env.RELEASE_TAG }} by ${{ github.actor }} - <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Logs>"
             }

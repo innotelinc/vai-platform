@@ -8,8 +8,17 @@ merged since the last release. **Merging that PR is what cuts the release** — 
 tags `dograh-vX.Y.Z` and publishes the GitHub release.
 
 Merging the release PR is also what triggers
-`.github/workflows/release-deployment.yml` (on `release: published`), which
-builds the UI and deploys it to Vercel production.
+`.github/workflows/release-deployment.yml`, which builds the UI and deploys it
+to Vercel production.
+
+That deploy is triggered by the Release Please run itself
+(`on.workflow_run`), not by `on: release: published`. The distinction matters:
+GitHub **suppresses** runs caused by events a `GITHUB_TOKEN` creates, so a
+release cut with the built-in token emits no `release` event and a workflow
+listening for one never runs — a failure mode that looks like "the deploy just
+quietly stopped". `workflow_run` events are emitted by Actions itself rather
+than by a token, so they are not suppressed, and this repo no longer needs a
+PAT to ship a release.
 
 ## The version baseline
 
@@ -43,7 +52,6 @@ Set them under **Settings → Secrets and variables → Actions**.
 
 | Secret | Used by | Why it is required |
 |--------|---------|--------------------|
-| `RELEASE_PLEASE_TOKEN` | `release-automation.yml` | **A PAT (classic, `repo` scope; or fine-grained with Contents + Pull requests: write).** A release cut with the built-in `GITHUB_TOKEN` does **not** trigger other workflows — GitHub suppresses events that token creates — so `release-deployment.yml` never runs and the release silently never ships. The workflow falls back to `GITHUB_TOKEN` so the release itself still gets cut, but the deploy will not fire until this is set. |
 | `VERCEL_TOKEN` | `release-deployment.yml` | Vercel CLI auth for `vercel pull` / `build` / `deploy --prod`. |
 | `VERCEL_ORG_ID` | `release-deployment.yml` | Which Vercel team/account owns the project. |
 | `VERCEL_PROJECT_ID` | `release-deployment.yml` | Which Vercel project to deploy. |
@@ -70,6 +78,11 @@ release-please failed: GitHub Actions is not permitted to create or approve pull
    release are created.
 4. `release-deployment.yml` runs the Vercel production deploy and appends the
    deployment URL to the release notes.
+
+If you merge the release PR and no deploy starts, check the Release Please run
+rather than the deployment: on a run that only refreshed the release PR, the
+deploy's `resolve` job reports "published no release" and stops there, which is
+correct — there was nothing to ship.
 
 ## Local pre-flight
 
