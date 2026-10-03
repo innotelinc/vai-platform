@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.45.1 (2026-10-03)
+
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+
+
+
+**Full Changelog**: https://github.com/innotelinc/vai-platform/compare/dograh-v1.45.0...dograh-v1.45.1
+
 ## 1.45.0 (2026-08-11)
 
 <!-- Release notes generated using configuration in .github/release.yml at main -->
