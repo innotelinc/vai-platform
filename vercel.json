@@ -1,0 +1,21 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "ui": {
+      "root": "ui",
+      "framework": "nextjs"
+    },
+    "visualizer": {
+      "root": "evals/visualizer",
+      "framework": "nextjs"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "ui"
+      }
+    }
+  ]
+}
