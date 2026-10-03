@@ -118,6 +118,14 @@ Before submitting a bug-fix pull request, search the [GitHub Issues](https://git
 
 Link the existing or newly created issue in the bug-fix pull request. Use a [GitHub closing keyword](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/linking-a-pull-request-to-an-issue) when the pull request fully resolves the issue (for example, `Fixes #123`).
 
+## 📦 Releases
+
+Releases are cut automatically from conventional-commit subjects by
+[release-please](https://github.com/googleapis/release-please); merging the
+release PR tags the version and triggers the production deploy. The required
+repository secrets and the version-baseline tag rule are documented in
+[RELEASING.md](RELEASING.md).
+
 ## 💬 Community & Support
 
 Our Slack community is the heart of Dograh AI development:
