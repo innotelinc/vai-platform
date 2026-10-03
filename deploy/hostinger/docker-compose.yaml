@@ -66,7 +66,9 @@ services:
       - app-network
 
   minio:
-    image: minio/minio
+    # Estate GHCR mirror of a maintained MinIO CE build (upstream dropped its
+    # docker.io/quay.io CE images); override with MINIO_IMAGE if needed.
+    image: ${MINIO_IMAGE:-ghcr.io/innotelinc/capstone/minio:RELEASE.2026-08-04T00-00-00Z}
     container_name: minio
     restart: unless-stopped
     command: server /data --console-address ":9001"

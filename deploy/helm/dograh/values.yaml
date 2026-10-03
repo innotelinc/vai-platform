@@ -614,12 +614,15 @@ redisinternal:
     limits: { cpu: 500m, memory: 256Mi }
 
 minio:
-  # Official upstream MinIO. Root creds are shared with the app (single source of
-  # truth) so they can't drift; the app creates its bucket on first use.
+  # Estate GHCR mirror of a maintained MinIO CE build. Upstream removed its CE
+  # images from docker.io/quay.io, so this points at innotelinc/capstone's
+  # published mirror (see .github/workflows/publish-minio-mirror.yml there).
+  # Root creds are shared with the app (single source of truth) so they can't
+  # drift; the app creates its bucket on first use.
   image:
-    registry: docker.io
-    repository: minio/minio
-    tag: RELEASE.2025-04-22T22-12-26Z
+    registry: ghcr.io
+    repository: innotelinc/capstone/minio
+    tag: RELEASE.2026-08-04T00-00-00Z
     pullPolicy: IfNotPresent
   auth:
     rootUser: minioadmin
