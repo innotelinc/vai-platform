@@ -73,7 +73,7 @@ jobs:
       - name: Set up Node 22 (test_ts_bridge.py shells out to node)
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
 
       - name: Create Python virtual environment
         run: |
